@@ -1,4 +1,4 @@
-use egui::{Vec2, Pos2, Color32, Ui};
+use egui::{Vec2, Pos2, Color32, Ui, Stroke};
 
 #[derive(serde::Deserialize, serde::Serialize, Default, Debug)]
 pub struct Component{
@@ -70,7 +70,37 @@ impl TemplateApp {
     }
 }
 
+fn draw_grid(ui: &mut Ui, stroke: Stroke) {
+                
+    // Create grid lines because it's COOL and we're in the FUTURE
+    let height = ui.available_height();
+    let width = ui.available_width();
+    let min_dim = height.min(width);
+    let spacing = min_dim * 0.05;
+    let margin = min_dim * 0.02;
+    let n_vertical_lines = (width / spacing).round() as i32;  
+    let n_horizontal_lines = (height / spacing).round() as i32;  
+    let offset = ui.min_rect().left_top();
+    
+    // Vertical lines
+    for i in 1..n_vertical_lines {
+        ui.painter().line_segment([
+            Pos2{x: (i as f32 * spacing) as f32, y: margin} + offset.to_vec2(),
+            Pos2{x: (i as f32 * spacing) as f32, y: height - margin} + offset.to_vec2()
+        ],
+        stroke);
+    }
 
+    // Horizontal lines
+    for i in 1..n_horizontal_lines {
+        ui.painter().line_segment([
+            Pos2{y: (i as f32 * spacing) as f32, x: margin} + offset.to_vec2(),
+            Pos2{y: (i as f32 * spacing) as f32, x: width - margin} + offset.to_vec2()
+        ],
+        stroke);
+    }
+
+}
 impl eframe::App for TemplateApp {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
@@ -122,9 +152,8 @@ impl eframe::App for TemplateApp {
             // The central panel the region left after adding TopPanel's and SidePanel's
             ui.heading("Studio Floor");
             egui::warn_if_debug_build(ui);
-            
-            // Create grid lines because it's COOL and we're in the FUTURE
-            ui.
+            draw_grid(ui, egui::Stroke{width: 1.0, color: egui::Color32::from_gray(60)});
+            // ui.painter().line_segment([margin, (size - margin).to_pos2()], grid_stroke);
             // ui_connected_windows(ui, ctx, components);
             for component in components{
                 component.create_window(ctx);
