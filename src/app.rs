@@ -36,85 +36,14 @@ impl TemplateApp {
 
         // Load previous app state (if any).
         // Note that you must enable the `persistence` feature for this to work.
-        if let Some(storage) = cc.storage {
-            return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
-        }
+        // if let Some(storage) = cc.storage {
+        //     return eframe::get_value(storage, eframe::APP_KEY).unwrap_or_default();
+        // }
 
         Default::default()
     }
 }
 
-// fn ui_connected_windows(ui: &mut egui::Ui, ctx: &egui::Context, components: &mut Vec<Component>) -> egui::Response {
-//     // Widget code can be broken up in four steps:
-//     //  1. Decide a size for the widget
-//     //  2. Allocate space for it
-//     //  3. Handle interactions with the widget (if any)
-//     //  4. Paint the widget
-
-//     // 1. Deciding widget size:
-//     // You can query the `ui` how much space is available,
-//     // but in this example we have a fixed size widget based on the height of a standard button:
-//     let desired_size = egui::vec2(400.0, 400.0);
-    
-//     // 2. Allocating space:
-//     // This is where we get a region of the screen assigned.
-//     // We also tell the Ui to sense clicks in the allocated region.
-//     let (rect, mut response) = ui.allocate_exact_size(
-//         ui.available_size(),
-//         egui::Sense::click_and_drag()
-//     );
-//     // ui.allocate
-//     // 3. Interact: Time to check for clicks!
-//     if response.drag_started() {
-
-//         println!("Outside {:?}", response.drag_delta());
-
-//     }
-//     if response.clicked() {
-//         println!("Clicked outside");
-//         response.mark_changed(); // report back that the value changed
-//     }
-
-//     // Attach some meta-data to the response which can be used by screen readers:
-//     // response.widget_info(|| egui::WidgetInfo::selected(egui::WidgetType::Checkbox, *on, ""));
-    
-//     egui::Window::new("6DoF")
-//         .current_pos(components[0].pos)
-//         .show(ctx, |ui| {
-//             ui.label("6DoF");
-//             let (rect, mut response) = ui.allocate_exact_size(
-//                 ui.available_size(),
-//                 egui::Sense::click_and_drag()
-//             );
-
-//             if response.drag_started() {
-//                 println!("Inside {:?}", response.drag_delta());
-
-//             }
-//             if response.clicked() {
-//                 println!("Clicked Inside");
-//                 response.mark_changed(); // report back that the value changed
-//             }
-
-//     });
-
-//     egui::Window::new("Thermal")
-//     .current_pos(components[0].connections[0].pos)
-//     .show(ctx, |ui| {
-//         ui.label("Thermal");
-//     });
-
-//     let line_stroke = egui::Stroke{width: 1.0, color: egui::Color32::LIGHT_BLUE};
-//     ui.painter().line_segment(
-//         [components[0].pos, components[0].connections[0].pos],
-//         line_stroke
-//     );
-
-//     // All done! Return the interaction response so the user can check what happened
-//     // (hovered, clicked, ...) and maybe show a tooltip:
-//     response
-
-// }
 
 impl eframe::App for TemplateApp {
     /// Called by the frame work to save state before shutdown.
@@ -173,16 +102,19 @@ impl eframe::App for TemplateApp {
                 egui::Window::new(component.name.to_string())
                     .current_pos(component.pos)
                     .fixed_size(component.size)
+                    .default_pos(component.pos)
                     .show(ctx, |ui| {
-                    ui.label(component.name.to_string());
+                        
+                        let response = ui.allocate_response(ui.available_size(), egui::Sense::click_and_drag());
+                        
+                        if response.dragged() {
+                            component.pos = component.pos + response.drag_delta();
+                        }
+                        
+                        ui.label(component.name.to_string());
+                        
                 });
                 
-                // egui::Window::new(component.components[0].name.to_string())
-                //     .current_pos(component.components[0].pos)
-                //     .show(ctx, |ui| {
-                //     ui.label(component.components[0].name.to_string());
-                // });
-
                 for reference_component in &mut component.components{
 
                     // Create component
