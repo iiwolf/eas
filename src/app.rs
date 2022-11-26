@@ -1,4 +1,4 @@
-use egui::{Vec2, Pos2, Color32};
+use egui::{Vec2, Pos2, Color32, Ui};
 
 #[derive(serde::Deserialize, serde::Serialize, Default, Debug)]
 pub struct Component{
@@ -8,6 +8,32 @@ pub struct Component{
     components: Vec<Component>
 }
 
+impl Component{
+    fn create_window(&mut self, ctx: &egui::Context) {
+        egui::Window::new(self.name.to_string())
+            .fixed_size(self.size)
+            .default_pos(self.pos)
+            .current_pos(self.pos)
+            .show(ctx, |ui| {
+                
+                let response = ui.allocate_response(ui.available_size(), egui::Sense::click_and_drag());
+                
+                if response.dragged() {
+                    self.pos = self.pos + response.drag_delta();
+                }
+                
+                ui.label(self.name.to_string());
+                
+        });
+    }
+
+    fn create_child_window(&mut self, ctx: &egui::Context, ui: &mut Ui) {
+
+        self.create_window(ctx);
+
+    }
+
+}
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -96,43 +122,25 @@ impl eframe::App for TemplateApp {
             // The central panel the region left after adding TopPanel's and SidePanel's
             ui.heading("Studio Floor");
             egui::warn_if_debug_build(ui);
-
+            
+            // Create grid lines because it's COOL and we're in the FUTURE
+            ui.
             // ui_connected_windows(ui, ctx, components);
             for component in components{
-                egui::Window::new(component.name.to_string())
-                    .current_pos(component.pos)
-                    .fixed_size(component.size)
-                    .default_pos(component.pos)
-                    .show(ctx, |ui| {
-                        
-                        let response = ui.allocate_response(ui.available_size(), egui::Sense::click_and_drag());
-                        
-                        if response.dragged() {
-                            component.pos = component.pos + response.drag_delta();
-                        }
-                        
-                        ui.label(component.name.to_string());
-                        
-                });
+                component.create_window(ctx);
                 
-                for reference_component in &mut component.components{
-
-                    // Create component
-                    egui::Window::new(reference_component.name.to_string())
-                        .current_pos(reference_component.pos)
-                        .default_size(reference_component.size)
-                        .show(ctx, |ui| {
-                        ui.label(reference_component.name.to_string());
-                    });
+                for child_component in &mut component.components{
+                    child_component.create_child_window(ctx, ui);
 
                     // Create connection
                     let line_stroke = egui::Stroke{width: 1.0, color: egui::Color32::LIGHT_BLUE};
                     ui.painter().line_segment(
                         [
                             component.pos + component.size / 2.0,
-                            reference_component.pos + component.size / 2.0],
+                            child_component.pos + component.size / 2.0],
                         line_stroke
                     );   
+
                 }
 
             }
