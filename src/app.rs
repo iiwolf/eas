@@ -1,3 +1,4 @@
+use eframe::epaint::PathShape;
 use egui::{Vec2, Pos2, Color32, Ui, Stroke};
 
 #[derive(serde::Deserialize, serde::Serialize, Default, Debug)]
@@ -33,7 +34,76 @@ impl Component{
 
     }
 
+    fn create_globdule(&mut self, ctx: &egui::Context, ui: &mut Ui) {
+        
+        let stroke = egui::Stroke{width: 1.0, color: egui::Color32::WHITE};
+        // let mesh = egui::Mesh{
+        //     // indices: vec![0, 1, 2],
+        //     // vertices: vec![
+        //     //     egui::epaint::Vertex{pos: self.pos, ..Default::default()},
+        //     //     egui::epaint::Vertex{pos: self.pos + self.size / 2.0, ..Default::default()},
+        //     //     egui::epaint::Vertex{pos: self.pos - self.size / 2.0, ..Default::default()},
+        //     // ], 
+        //     // texture_id: ctx
+        //     ..Default::default()
+        // };
+        // let size = 100.0;
+        // ui.painter().line_segment([self.pos, Pos2{x: self.pos[0] + size, y: self.pos[1]}], egui::Stroke{width: 1.0, color: egui::Color32::WHITE});
+        // ui.painter().line_segment([self.pos, Pos2{x: self.pos[0], y: self.pos[1]  + size}], egui::Stroke{width: 1.0, color: egui::Color32::LIGHT_BLUE});
+        // ui.painter().line_segment([Pos2{x: self.pos[0] + size, y: self.pos[1]}, Pos2{x: self.pos[0], y: self.pos[1]  + size}], egui::Stroke{width: 1.0, color: egui::Color32::RED});
+        // ui.painter().line_segment([self.pos, self.pos - self.size / 2.0], egui::Stroke{width: 1.0, color: egui::Color32::RED});
+        // ui.painter().line_segment([self.pos + self.size / 2.0, self.pos - self.size / 2.0], egui::Stroke{width: 1.0, color: egui::Color32::LIGHT_BLUE});
+        let size = self.size[0];
+        let delta = size * 3.0_f32.powf(0.5) / 3.0;
+        let gamma = 30.0_f32.to_radians().tan() * size / 2.0;
+
+        let points = vec![
+            Pos2{x: self.pos[0], y: self.pos[1] + delta}, 
+            Pos2{x: self.pos[0] + 0.5 * size, y: self.pos[1] - gamma}, 
+            Pos2{x: self.pos[0] - 0.5 * size, y: self.pos[1] - gamma}, 
+        ];
+        ui.painter().add(PathShape::convex_polygon(points, Color32::GRAY, stroke));
+
+        // for component in &mut self.components{
+
+        //     // let origin = self.pos + Pos2 { x: gamma, y: gamma }.to_vec2();
+        //     let points = vec![
+        //         Pos2{x: component.pos[0], y: component.pos[1] + delta}, 
+        //         Pos2{x: component.pos[0] + 0.5 * size, y: component.pos[1] - gamma}, 
+        //         Pos2{x: component.pos[0] - 0.5 * size, y: component.pos[1] - gamma}, 
+        //     ];
+        // ui.painter().add(PathShape::convex_polygon(points, Color32::GRAY, stroke));
+
+        // }
+
+        let mut origin = Pos2{x: self.pos[0] + gamma, y: self.pos[1]};
+        for i in 1..10 {
+            let points = vec![
+                Pos2{x: origin[0], y: origin[1] + delta}, 
+                Pos2{x: origin[0] + 0.5 * size, y: origin[1] - gamma}, 
+                Pos2{x: origin[0] - 0.5 * size, y: origin[1] - gamma}, 
+            ];
+            ui.painter().add(PathShape::convex_polygon(points, Color32::GRAY, stroke));
+
+            if i % 2 == 0 {
+                origin[0] += gamma;
+            }else{
+                origin[1] += gamma;
+            }
+        }
+
+        // ui.painter().
+        let response = ui.allocate_response(ui.available_size(), egui::Sense::click_and_drag());
+                
+        if response.dragged() {
+            self.pos = self.pos + response.drag_delta();
+        }
+        
+
+    }
+
 }
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
@@ -101,6 +171,7 @@ fn draw_grid(ui: &mut Ui, stroke: Stroke) {
     }
 
 }
+
 impl eframe::App for TemplateApp {
     /// Called by the frame work to save state before shutdown.
     fn save(&mut self, storage: &mut dyn eframe::Storage) {
@@ -156,8 +227,8 @@ impl eframe::App for TemplateApp {
             // ui.painter().line_segment([margin, (size - margin).to_pos2()], grid_stroke);
             // ui_connected_windows(ui, ctx, components);
             for component in components{
-                component.create_window(ctx);
-                
+                // component.create_window(ctx);
+                component.create_globdule(ctx, ui);
                 for child_component in &mut component.components{
                     child_component.create_child_window(ctx, ui);
 
