@@ -1,11 +1,12 @@
 use eframe::epaint::PathShape;
 use egui::{Vec2, Pos2, Color32, Ui, Stroke};
+const COMPONENT_SIZE: Vec2 = Vec2{x: 150.0, y: 125.0};
+const N_MAX_WINDOWS: i32 = 1000;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub struct Component{
     name: String,
     pos: Pos2,
-    size: Vec2,
     components: Vec<Component>
 }
 
@@ -14,17 +15,24 @@ impl Default for Component {
         Self {
             name: "Empty".to_string(),
             pos: Pos2{x: 0.0, y: 0.0},
-            size: Vec2{x: 150.0, y: 150.0},
             components: Vec::default()
         }
     }
 }
 impl Component{
 
+    fn new(name: String) -> Self {
+        Self {
+            name: name,
+            pos: Pos2{x: 0.0, y: 0.0},
+            components: Vec::default()
+        }
+    }
+
     fn create_window(&mut self, ctx: &egui::Context) {
         egui::Window::new(self.name.to_string())
             .title_bar(false)
-            .fixed_size(self.size)
+            .fixed_size(COMPONENT_SIZE)
             .default_pos(self.pos)
             .current_pos(self.pos)
             .show(ctx, |ui| {
@@ -47,7 +55,7 @@ impl Component{
     fn create_globdule(&mut self, ctx: &egui::Context, ui: &mut Ui) {
         
         let stroke = egui::Stroke{width: 1.0, color: egui::Color32::WHITE};
-        let size = self.size[0];
+        let size = COMPONENT_SIZE[0];
         let delta = size * 3.0_f32.powf(0.5) / 3.0;
         let gamma = 30.0_f32.to_radians().tan() * size / 2.0;
 
@@ -96,8 +104,8 @@ pub struct TemplateApp {
 impl Default for TemplateApp {
     fn default() -> Self {
 
-        let mut c1 = Component{name: "6DoF".to_string(), pos: Pos2{x: 600.0, y: 200.0}, size: Vec2{x: 150.0, y: 150.0}, ..Default::default()};
-        let mut c2 = Component{name: "Thermal".to_string(), pos: Pos2{x: 800.0, y: 200.0}, size: Vec2{x: 150.0, y: 150.0}, ..Default::default()};
+        let mut c1 = Component{name: "6DoF".to_string(), pos: Pos2{x: 600.0, y: 200.0}, ..Default::default()};
+        let mut c2 = Component{name: "Thermal".to_string(), pos: Pos2{x: 800.0, y: 200.0}, ..Default::default()};
         c1.components.push(c2);
         println!("{:?}", c1.components[0]);
         Self {
@@ -209,17 +217,29 @@ impl eframe::App for TemplateApp {
             let parent_rect = ui.min_rect().right_bottom();
             let pos = parent_rect - Pos2{x:100.0, y:100.0}.to_vec2();
             let text = egui::RichText::new("Add Component").font(egui::FontId::proportional(40.0));
+
             egui::Area::new("add_button_area")
                 .anchor(egui::Align2::RIGHT_BOTTOM, Vec2{x:-100.0, y:-100.0})
                 .show(ctx, |ui| {
                     if ui.button(text).clicked() {
-                        components.push(Component::default());
+                        
+                        // Create unique name
+                        let names = Vec::from_iter(components.iter().map(|c| c.name.to_string()));
+                        let mut default_name = "Empty".to_string();
+                        for counter in 1..N_MAX_WINDOWS{
+                            if !names.contains(&default_name){ break; }
+                            default_name = format!("Empty_{}", counter);
+                        }
+                        components.push(Component::new(default_name));
                     }
                 }
             );
 
             // ui_connected_windows(ui, ctx, components);
             for component in components{
+                
+                // Force component to be in bounds
+                component.pos = component.pos.max(ui.min_rect().left_top());
                 component.create_window(ctx);
 
                 for child_component in &mut component.components{
@@ -229,8 +249,8 @@ impl eframe::App for TemplateApp {
                     let line_stroke = egui::Stroke{width: 1.0, color: egui::Color32::LIGHT_BLUE};
                     ui.painter().line_segment(
                         [
-                            component.pos + component.size / 2.0,
-                            child_component.pos + component.size / 2.0],
+                            component.pos + COMPONENT_SIZE / 2.0,
+                            child_component.pos + COMPONENT_SIZE / 2.0],
                         line_stroke
                     );   
 
