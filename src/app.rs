@@ -1,10 +1,10 @@
 use eframe::epaint::PathShape;
 use egui::{Vec2, Pos2, Color32, Ui, Stroke, TextEdit, NumExt};
+use crate::grid::draw_grid;
+
 const COMPONENT_SIZE: Vec2 = Vec2{x: 150.0, y: 125.0};
 const N_MAX_WINDOWS: i32 = 1000;
 const CONNECTION_STROKE: egui::Stroke = egui::Stroke{width: 1.0, color: egui::Color32::LIGHT_BLUE};
-const GAP_SIZE: f32 = 10.0;
-use rand::prelude::*;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub struct Component{
@@ -48,7 +48,7 @@ impl Component{
         }
     }
 
-    fn create_window(&mut self, ctx: &egui::Context, parent_ui: &mut Ui) {
+    fn create_window(&mut self, ctx: &egui::Context, parent_ui: &mut Ui, active_connection: &mut Option<Connection>) {
         egui::Window::new(self.name.to_string())
             .title_bar(false)
             .fixed_size(COMPONENT_SIZE)
@@ -56,18 +56,15 @@ impl Component{
             .current_pos(self.pos)
             .show(ctx, |ui| {
                 
-                // Hover response for all
-                let hover_response = ui.allocate_response(ui.available_size(), egui::Sense::hover());
 
                 // Drag
                 let response = ui.allocate_response(ui.available_size(), egui::Sense::click_and_drag());
                 if response.dragged() {
                     self.pos = self.pos + response.drag_delta();
                 }
-
+                
                 // Adding arrow
                 let rect = ui.min_rect();
-                let edge = rect.right();
                 let mut min = rect.right_top();
                 min.x -= 10.0;
                 let mut max = rect.right_bottom();
@@ -76,18 +73,23 @@ impl Component{
                 let right_edge_rect = egui::Rect{min:min, max:max};
                 let edge_response = ui.allocate_rect(right_edge_rect,  egui::Sense::click());
                 
+                // Highlight affect on edge hover
                 if edge_response.hovered(){
                     ui.painter().rect_filled(right_edge_rect, 0.0, egui::Color32::LIGHT_BLUE);
                 }
                 
+                // Start arrow
                 if edge_response.clicked() {
+                    
+                    // If there is an active connection coming in
+                    if active_connection.is_some() {
 
+                    }
                     if self.active_connection.is_none() {
-                        let pos = hover_response.hover_pos().unwrap();
+                        let pos = edge_response.hover_pos().unwrap();
                         self.active_connection = Some(Connection{p1: pos, p2: pos, connecting: true});
                     } else if self.active_connection.is_some() {
-                        // self.connections.push(self.active_connection.take().unwrap());
-                        
+                        self.connections.push(self.active_connection.take().unwrap());
                         self.active_connection = None;
                     }
                 }
@@ -100,60 +102,9 @@ impl Component{
 
 
                 ui.text_edit_singleline(&mut self.name);
-                // if ui.add(egui::Label::new("click me").sense(egui::Sense::click())).double_clicked() {
-                //     println!("Double clicked!");
-                //     ui.text_edit_singleline(&mut self.name).request_focus();
 
-                // }
-                // let mut label = egui::Label::new(*self.name);
-                // label.sense(egui::Sense::click());
-                // if ui.label(self.name.to_string()).double_clicked(){
-                    // println!("Double clicked!");
-                    // ui.text_edit_singleline(&mut self.name);
-                // }
 
         });
-    }
-
-
-    fn create_globdule(&mut self, ctx: &egui::Context, ui: &mut Ui) {
-        
-        let stroke = egui::Stroke{width: 1.0, color: egui::Color32::WHITE};
-        let size = COMPONENT_SIZE[0];
-        let delta = size * 3.0_f32.powf(0.5) / 3.0;
-        let gamma = 30.0_f32.to_radians().tan() * size / 2.0;
-
-        let points = vec![
-            Pos2{x: self.pos[0], y: self.pos[1] + delta}, 
-            Pos2{x: self.pos[0] + 0.5 * size, y: self.pos[1] - gamma}, 
-            Pos2{x: self.pos[0] - 0.5 * size, y: self.pos[1] - gamma}, 
-        ];
-        ui.painter().add(PathShape::convex_polygon(points, Color32::GRAY, stroke));
-
-        let mut origin = Pos2{x: self.pos[0] + gamma, y: self.pos[1]};
-        for i in 1..10 {
-            let points = vec![
-                Pos2{x: origin[0], y: origin[1] + delta}, 
-                Pos2{x: origin[0] + 0.5 * size, y: origin[1] - gamma}, 
-                Pos2{x: origin[0] - 0.5 * size, y: origin[1] - gamma}, 
-            ];
-            ui.painter().add(PathShape::convex_polygon(points, Color32::GRAY, stroke));
-
-            if i % 2 == 0 {
-                origin[0] += gamma;
-            }else{
-                origin[1] += gamma;
-            }
-        }
-
-        // ui.painter().
-        let response = ui.allocate_response(ui.available_size(), egui::Sense::click_and_drag());
-                
-        if response.dragged() {
-            self.pos = self.pos + response.drag_delta();
-        }
-        
-
     }
 
 }
@@ -194,70 +145,6 @@ impl TemplateApp {
 
         Default::default()
     }
-}
-
-fn draw_grid(ui: &mut Ui, stroke: Stroke, line_state: &mut f32) {
-                
-    // Create grid lines because it's COOL and we're in the FUTURE
-    let height = ui.available_height();
-    let width = ui.available_width();
-    let min_dim = height.min(width);
-    let spacing = min_dim * 0.05;
-    let margin = min_dim * 0.02;
-    let n_vertical_lines = (width / spacing).round() as i32;  
-    let n_horizontal_lines = (height / spacing).round() as i32;  
-    let offset = ui.min_rect().left_top();
-    
-    // Vertical lines
-    for i in 1..n_vertical_lines {
-        ui.painter().line_segment([
-            Pos2{x: (i as f32 * spacing) as f32, y: margin} + offset.to_vec2(),
-            Pos2{x: (i as f32 * spacing) as f32, y: height - margin} + offset.to_vec2()
-        ],
-        stroke);
-    }
-
-    // if *line_state == 0 { 
-    //     *line_state = self.time
-    // }
-    // let time = ui.input().unstable_dt.at_most(1.0 / 30.0) as f64;
-    
-    let cur_time = ui.input().time as f32;
-    // *line_state = ui.input().time as f32;
-    let do_flicker = rand::random::<f32>() < 0.05 && (cur_time - *line_state) > 5.0;
-    // Horizontal lines
-    for i in 1..n_horizontal_lines {
-
-        if  do_flicker { 
-            // Segment 1
-            let mut w1 = 0.0;
-            let step_size = width / 100.0;
-            for i in 0..100 {
-
-                if rand::random::<f32>() < 0.5 { 
-                    ui.painter().line_segment([
-                        Pos2{y: (i as f32 * spacing) as f32, x: w1} + offset.to_vec2(),
-                        Pos2{y: (i as f32 * spacing) as f32, x: w1 + (i as f32) * step_size} + offset.to_vec2()
-                    ],
-                    stroke);
-                }
-                w1 += (i as f32) * step_size;
-            }
-
-        }else{
-            ui.painter().line_segment([
-                Pos2{y: (i as f32 * spacing) as f32, x: margin} + offset.to_vec2(),
-                Pos2{y: (i as f32 * spacing) as f32, x: width - margin} + offset.to_vec2()
-            ],
-            stroke);
-        }
-
-    }
-    
-    if do_flicker {
-        *line_state = cur_time;
-    }
-
 }
 
 impl eframe::App for TemplateApp {
@@ -333,6 +220,8 @@ impl eframe::App for TemplateApp {
                     }
                 }
             );
+            
+            let mut active_connection: Option<Connection> = None;
 
             // ui_connected_windows(ui, ctx, components);
             for component in components{
@@ -340,9 +229,14 @@ impl eframe::App for TemplateApp {
                 // Force component to be in bounds
                 component.pos = component.pos.max(ui.min_rect().left_top());
                 component.create_window(ctx, ui);
-
+                
+                // If new component connected
+                if component.active_connection.is_some() {
+                    active_connection = component.active_connection;
+                }
+                
                 for child_component in &mut component.components{
-                    child_component.create_window(ctx, ui);
+                    child_component.create_window(ctx,  ui);
                     
                     // Create connection
                     ui.painter().line_segment(
