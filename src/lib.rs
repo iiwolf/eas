@@ -1,5 +1,6 @@
 #![warn(clippy::all, rust_2018_idioms)]
-
-mod app;
-mod grid;
+pub mod app;
+pub mod grid;
+pub mod component;
+pub mod connection;
 pub use app::TemplateApp;
