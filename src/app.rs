@@ -4,6 +4,7 @@ const COMPONENT_SIZE: Vec2 = Vec2{x: 150.0, y: 125.0};
 const N_MAX_WINDOWS: i32 = 1000;
 const CONNECTION_STROKE: egui::Stroke = egui::Stroke{width: 1.0, color: egui::Color32::LIGHT_BLUE};
 const GAP_SIZE: f32 = 10.0;
+use rand::prelude::*;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub struct Component{
@@ -174,7 +175,7 @@ impl Default for TemplateApp {
         println!("{:?}", c1.components[0]);
         Self {
             components: vec![c1],
-            line_state: 0.0
+            line_state: 0.0,
         }
     }
 }
@@ -220,31 +221,41 @@ fn draw_grid(ui: &mut Ui, stroke: Stroke, line_state: &mut f32) {
     //     *line_state = self.time
     // }
     // let time = ui.input().unstable_dt.at_most(1.0 / 30.0) as f64;
-
-    let time = ui.input().stable_dt.min(0.1);
-    *line_state += time / 15.0;
-    if *line_state >= 1.0{
-        *line_state = 0.0;
-    }
+    
+    let cur_time = ui.input().time as f32;
+    // *line_state = ui.input().time as f32;
+    let do_flicker = rand::random::<f32>() < 0.05 && (cur_time - *line_state) > 5.0;
     // Horizontal lines
     for i in 1..n_horizontal_lines {
 
-        // Segment 1
-        let w1 = (width - margin) * *line_state - (i as f32) * 10.0;
-        let w2 = w1 + GAP_SIZE;
-        ui.painter().line_segment([
-            Pos2{y: (i as f32 * spacing) as f32, x: margin} + offset.to_vec2(),
-            Pos2{y: (i as f32 * spacing) as f32, x: w1} + offset.to_vec2()
-        ],
-        stroke);
+        if  do_flicker { 
+            // Segment 1
+            let mut w1 = 0.0;
+            let step_size = width / 100.0;
+            for i in 0..100 {
 
-        // Segment 2
-        ui.painter().line_segment([
-            Pos2{y: (i as f32 * spacing) as f32, x: w2} + offset.to_vec2(),
-            Pos2{y: (i as f32 * spacing) as f32, x: width - margin} + offset.to_vec2()
-        ],
-        stroke);
+                if rand::random::<f32>() < 0.5 { 
+                    ui.painter().line_segment([
+                        Pos2{y: (i as f32 * spacing) as f32, x: w1} + offset.to_vec2(),
+                        Pos2{y: (i as f32 * spacing) as f32, x: w1 + (i as f32) * step_size} + offset.to_vec2()
+                    ],
+                    stroke);
+                }
+                w1 += (i as f32) * step_size;
+            }
 
+        }else{
+            ui.painter().line_segment([
+                Pos2{y: (i as f32 * spacing) as f32, x: margin} + offset.to_vec2(),
+                Pos2{y: (i as f32 * spacing) as f32, x: width - margin} + offset.to_vec2()
+            ],
+            stroke);
+        }
+
+    }
+    
+    if do_flicker {
+        *line_state = cur_time;
     }
 
 }
