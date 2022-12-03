@@ -1,13 +1,26 @@
 use eframe::epaint::PathShape;
-use egui::{Vec2, Pos2, Color32, Ui, Stroke};
+use egui::{Vec2, Pos2, Color32, Ui, Stroke, TextEdit, NumExt};
 const COMPONENT_SIZE: Vec2 = Vec2{x: 150.0, y: 125.0};
 const N_MAX_WINDOWS: i32 = 1000;
+const CONNECTION_STROKE: egui::Stroke = egui::Stroke{width: 1.0, color: egui::Color32::LIGHT_BLUE};
+const GAP_SIZE: f32 = 10.0;
 
 #[derive(serde::Deserialize, serde::Serialize, Debug)]
 pub struct Component{
     name: String,
     pos: Pos2,
-    components: Vec<Component>
+    components: Vec<Component>,
+    connections: Vec<Connection>,
+    active_connection: Option<Connection>,
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug, Default)]
+pub struct Connection{
+    // to: Component,
+    // from: Component,
+    p1: Pos2,
+    p2: Pos2,
+    connecting: bool,
 }
 
 impl Default for Component {
@@ -15,21 +28,26 @@ impl Default for Component {
         Self {
             name: "Empty".to_string(),
             pos: Pos2{x: 0.0, y: 0.0},
-            components: Vec::default()
+            components: Vec::default(),
+            connections: Vec::default(),
+            active_connection: None
         }
     }
 }
+
 impl Component{
 
     fn new(name: String) -> Self {
         Self {
             name: name,
             pos: Pos2{x: 0.0, y: 0.0},
-            components: Vec::default()
+            components: Vec::default(),
+            connections: Vec::default(),
+            active_connection: None
         }
     }
 
-    fn create_window(&mut self, ctx: &egui::Context) {
+    fn create_window(&mut self, ctx: &egui::Context, parent_ui: &mut Ui) {
         egui::Window::new(self.name.to_string())
             .title_bar(false)
             .fixed_size(COMPONENT_SIZE)
@@ -37,20 +55,65 @@ impl Component{
             .current_pos(self.pos)
             .show(ctx, |ui| {
                 
+                // Hover response for all
+                let hover_response = ui.allocate_response(ui.available_size(), egui::Sense::hover());
+
+                // Drag
                 let response = ui.allocate_response(ui.available_size(), egui::Sense::click_and_drag());
-                
                 if response.dragged() {
                     self.pos = self.pos + response.drag_delta();
                 }
+
+                // Adding arrow
+                let rect = ui.min_rect();
+                let edge = rect.right();
+                let mut min = rect.right_top();
+                min.x -= 10.0;
+                let mut max = rect.right_bottom();
+                max.x += 10.0;
+
+                let right_edge_rect = egui::Rect{min:min, max:max};
+                let edge_response = ui.allocate_rect(right_edge_rect,  egui::Sense::click());
                 
-                ui.label(self.name.to_string());
+                if edge_response.hovered(){
+                    ui.painter().rect_filled(right_edge_rect, 0.0, egui::Color32::LIGHT_BLUE);
+                }
                 
+                if edge_response.clicked() {
+
+                    if self.active_connection.is_none() {
+                        let pos = hover_response.hover_pos().unwrap();
+                        self.active_connection = Some(Connection{p1: pos, p2: pos, connecting: true});
+                    } else if self.active_connection.is_some() {
+                        // self.connections.push(self.active_connection.take().unwrap());
+                        
+                        self.active_connection = None;
+                    }
+                }
+                
+                if self.active_connection.is_some() {
+                    let mut connection = self.active_connection.as_mut().unwrap();
+                    parent_ui.painter().line_segment([connection.p1, connection.p2], CONNECTION_STROKE);
+                    connection.p2 = ctx.pointer_hover_pos().unwrap();
+                }
+
+
+                ui.text_edit_singleline(&mut self.name);
+                // if ui.add(egui::Label::new("click me").sense(egui::Sense::click())).double_clicked() {
+                //     println!("Double clicked!");
+                //     ui.text_edit_singleline(&mut self.name).request_focus();
+
+                // }
+                // let mut label = egui::Label::new(*self.name);
+                // label.sense(egui::Sense::click());
+                // if ui.label(self.name.to_string()).double_clicked(){
+                    // println!("Double clicked!");
+                    // ui.text_edit_singleline(&mut self.name);
+                // }
+
         });
     }
 
-    fn create_child_window(&mut self, ctx: &egui::Context) {
-        self.create_window(ctx);
-    }
 
     fn create_globdule(&mut self, ctx: &egui::Context, ui: &mut Ui) {
         
@@ -99,6 +162,7 @@ impl Component{
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
     components: Vec<Component>,
+    line_state: f32,
 }
 
 impl Default for TemplateApp {
@@ -110,6 +174,7 @@ impl Default for TemplateApp {
         println!("{:?}", c1.components[0]);
         Self {
             components: vec![c1],
+            line_state: 0.0
         }
     }
 }
@@ -130,7 +195,7 @@ impl TemplateApp {
     }
 }
 
-fn draw_grid(ui: &mut Ui, stroke: Stroke) {
+fn draw_grid(ui: &mut Ui, stroke: Stroke, line_state: &mut f32) {
                 
     // Create grid lines because it's COOL and we're in the FUTURE
     let height = ui.available_height();
@@ -151,13 +216,35 @@ fn draw_grid(ui: &mut Ui, stroke: Stroke) {
         stroke);
     }
 
+    // if *line_state == 0 { 
+    //     *line_state = self.time
+    // }
+    // let time = ui.input().unstable_dt.at_most(1.0 / 30.0) as f64;
+
+    let time = ui.input().stable_dt.min(0.1);
+    *line_state += time / 15.0;
+    if *line_state >= 1.0{
+        *line_state = 0.0;
+    }
     // Horizontal lines
     for i in 1..n_horizontal_lines {
+
+        // Segment 1
+        let w1 = (width - margin) * *line_state - (i as f32) * 10.0;
+        let w2 = w1 + GAP_SIZE;
         ui.painter().line_segment([
             Pos2{y: (i as f32 * spacing) as f32, x: margin} + offset.to_vec2(),
+            Pos2{y: (i as f32 * spacing) as f32, x: w1} + offset.to_vec2()
+        ],
+        stroke);
+
+        // Segment 2
+        ui.painter().line_segment([
+            Pos2{y: (i as f32 * spacing) as f32, x: w2} + offset.to_vec2(),
             Pos2{y: (i as f32 * spacing) as f32, x: width - margin} + offset.to_vec2()
         ],
         stroke);
+
     }
 
 }
@@ -171,7 +258,7 @@ impl eframe::App for TemplateApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let Self {components} = self;
+        let Self {components, line_state} = self;
         
         // Examples of how to create different panels and windows.
         // Pick whichever suits you.
@@ -213,11 +300,12 @@ impl eframe::App for TemplateApp {
             // The central panel the region left after adding TopPanel's and SidePanel's
             ui.heading("Studio Floor");
             egui::warn_if_debug_build(ui);
-            draw_grid(ui, egui::Stroke{width: 1.0, color: egui::Color32::from_gray(60)});
+            draw_grid(ui, egui::Stroke{width: 1.0, color: egui::Color32::from_gray(60)}, line_state);
+
             let parent_rect = ui.min_rect().right_bottom();
             let pos = parent_rect - Pos2{x:100.0, y:100.0}.to_vec2();
             let text = egui::RichText::new("Add Component").font(egui::FontId::proportional(40.0));
-
+            ctx.request_repaint();
             egui::Area::new("add_button_area")
                 .anchor(egui::Align2::RIGHT_BOTTOM, Vec2{x:-100.0, y:-100.0})
                 .show(ctx, |ui| {
@@ -240,18 +328,17 @@ impl eframe::App for TemplateApp {
                 
                 // Force component to be in bounds
                 component.pos = component.pos.max(ui.min_rect().left_top());
-                component.create_window(ctx);
+                component.create_window(ctx, ui);
 
                 for child_component in &mut component.components{
-                    child_component.create_window(ctx);
-
+                    child_component.create_window(ctx, ui);
+                    
                     // Create connection
-                    let line_stroke = egui::Stroke{width: 1.0, color: egui::Color32::LIGHT_BLUE};
                     ui.painter().line_segment(
                         [
                             component.pos + COMPONENT_SIZE / 2.0,
                             child_component.pos + COMPONENT_SIZE / 2.0],
-                        line_stroke
+                        CONNECTION_STROKE
                     );   
 
                 }
