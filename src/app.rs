@@ -1,13 +1,13 @@
 use egui::{Vec2, Pos2};
 use crate::grid::draw_grid;
-use crate::component::{Component, CONNECTION_STROKE};
-use crate::connection::Connection;
+use crate::component::{Component};
+use crate::connection::{Connection, CONNECTION_STROKE};
 
 const N_MAX_WINDOWS: i32 = 1000;
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
-#[derive(serde::Deserialize, serde::Serialize)]
-#[serde(default)] // if we add new fields, give them default values when deserializing old state
+// #[derive(serde::Deserialize, serde::Serialize)]
+// #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
     components: Vec<Component>,
     line_state: f32,
@@ -17,8 +17,8 @@ pub struct TemplateApp {
 impl Default for TemplateApp {
     fn default() -> Self {
 
-        let mut c1 = Component{name: "6DoF".to_string(), pos: Pos2{x: 600.0, y: 200.0}, ..Default::default()};
-        let mut c2 = Component{name: "Thermal".to_string(), pos: Pos2{x: 800.0, y: 200.0}, ..Default::default()};
+        let mut c1 = Component{name: "6DoF".to_string(), ..Default::default()};
+        let mut c2 = Component{name: "Thermal".to_string(), ..Default::default()};
         Self {
             components: vec![c1, c2],
             line_state: 0.0,
@@ -36,9 +36,9 @@ impl TemplateApp {
 
 impl eframe::App for TemplateApp {
     /// Called by the frame work to save state before shutdown.
-    fn save(&mut self, storage: &mut dyn eframe::Storage) {
-        eframe::set_value(storage, eframe::APP_KEY, self);
-    }
+    // fn save(&mut self, storage: &mut dyn eframe::Storage) {
+    //     eframe::set_value(storage, eframe::APP_KEY, self);
+    // }
 
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
@@ -107,15 +107,15 @@ impl eframe::App for TemplateApp {
             // ui_connected_windows(ui, ctx, components);
             for component in components {
                 
-                // Force component to be in bounds
-                component.pos = component.pos.max(ui.min_rect().left_top());
-                component.create_window(ctx, ui, active_connection);
+                // // Force component to be in bounds
+                // component.pos = component.pos.max(ui.min_rect().left_top());
+                // component.create_window(ctx, ui, active_connection);
                 
                 
-                // If new component connected
-                if component.active_connection.is_some() {
+                // // If new component connected
+                // if component.active_connection.is_some() {
 
-                }
+                // }
 
                 // // Create connection
                 // ui.painter().line_segment(

@@ -3,4 +3,5 @@ pub mod app;
 pub mod grid;
 pub mod component;
 pub mod connection;
+pub mod toolchain;
 pub use app::TemplateApp;
