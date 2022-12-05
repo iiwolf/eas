@@ -6,7 +6,7 @@ const COMPONENT_SIZE: Vec2 = Vec2{x: 150.0, y: 125.0};
 
 
 // #[derive(serde::Deserialize, serde::Serialize, Debug)]
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Value{
     // Integer(i32),
     Float(f32),
@@ -21,7 +21,8 @@ pub enum Value{
 pub struct Component{
     pub name: String,
     pub eval_expression: String,
-    pub input_data: HashMap<String, Value>,
+    pub required_input: HashMap<String, Value>,
+    pub required_output: HashMap<String, Value>,
 }
 
 impl Default for Component {
@@ -29,7 +30,8 @@ impl Default for Component {
         Self {
             name: "Empty".to_string(),
             eval_expression: String::new(),
-            input_data: HashMap::new(),
+            required_input: HashMap::new(),
+            required_output: HashMap::new(),
         }
     }
 }
@@ -40,15 +42,23 @@ impl Component{
         Self {
             name: name,
             eval_expression: String::new(),
-            input_data: HashMap::new(),
+            required_input: HashMap::new(),
+            required_output: HashMap::new(),
         }
     }
 
-    pub fn simulate(&self) -> f32 {
+    pub fn simulate(&self, input: &HashMap<String, Value>) -> HashMap<String, Value> {
         
-        // Replace eval strings with values
+        // Create mutable clone
         let mut eval_string = self.eval_expression.clone();
-        for (variable, value) in &self.input_data {
+        
+        // Get LHS
+        let mut string_parse = eval_string.split(" = ");
+        let y_var = string_parse.next().unwrap().to_string();
+
+        // Process RHS, replacing each input variable with value
+        eval_string = string_parse.next().unwrap().to_string();
+        for (variable, value) in input {
             eval_string = match value {
                 Value::Float(val) => eval_string.replace(variable, &format!("{:?}", val)),
                 Value::Vectorf32(vec32) => {
@@ -63,13 +73,16 @@ impl Component{
             }
             
         }
-        println!("Evaluating string: \n\t\"{}\"", eval_string);
+
+        // Get result
         let result = eval(&eval_string);
         if result.is_ok() {
-            result.unwrap().as_float().unwrap() as f32
+            let r = result.unwrap().as_float().unwrap() as f32;
+            HashMap::from([(y_var, Value::Float(r))])
+            
         }else{
             println!("Failed to run properly!\n\t{:?}", result.unwrap_err());
-            0.0
+            HashMap::new()
         }
         // .unwrap().as_float()
     }

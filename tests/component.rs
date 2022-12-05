@@ -2,7 +2,7 @@ extern crate eas;
 
 #[cfg(test)]
 mod tests{
-    use std::collections::HashMap;
+    use std::{collections::HashMap};
 
 
     #[test]
@@ -10,7 +10,7 @@ mod tests{
         use eas::component::{Component, Value};
         let mut c1 = Component{
             name: "square".to_string(),
-            eval_expression: String::from("x ^ 2"), 
+            eval_expression: String::from("y = x ^ 2"), 
             input_data: HashMap::from([
                 ("x".to_string(), Value::Float(3.0))
             ])
@@ -18,7 +18,7 @@ mod tests{
 
         let mut c2 = Component{
             name: "addition".to_string(),
-            eval_expression: String::from("x + 100.0 / (y0 + y1)"), 
+            eval_expression: String::from("z = x + 100.0 / (y0 + y1)"), 
             input_data: HashMap::from([
                 ("x".to_string(), Value::Float(9.0)),
                 ("y".to_string(), Value::Vectorf32(vec![5.0, 2.0])),
@@ -26,7 +26,16 @@ mod tests{
             
         };
 
-        assert_eq!(c1.simulate(), 9.0);
-        assert_eq!(c2.simulate(), 19.0);
+        let input = HashMap::from([("x".to_string(), Value::Float(3.0))]);
+        let answer = HashMap::from([("y".to_string(), Value::Float(9.0))]);
+        assert_eq!(c1.simulate(&input), answer);
+        // assert_eq!(
+        //     c2.simulate(&HashMap::from([
+        //         ("x".to_string(), Value::Float(9.0)),
+        //         ("y".to_string(), Value::Vectorf32(vec![5.0, 2.0])),
+        //     ])), 
+        //     HashMap::from([("y", 19.0)])
+        // );
+
     }
 }
