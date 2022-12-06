@@ -1,7 +1,10 @@
 use egui::{Vec2, Pos2};
 use crate::grid::draw_grid;
-use crate::component::{Component};
+use crate::component_window::ComponentWindow;
 use crate::connection::{Connection, CONNECTION_STROKE};
+use eas::component::{Component, Value};
+use eas::toolchain::Toolchain;
+use std::collections::HashMap;
 
 const N_MAX_WINDOWS: i32 = 1000;
 
@@ -9,7 +12,7 @@ const N_MAX_WINDOWS: i32 = 1000;
 // #[derive(serde::Deserialize, serde::Serialize)]
 // #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
-    components: Vec<Component>,
+    components: Vec<ComponentWindow>,
     line_state: f32,
     active_connection: Option<Connection>
 }
@@ -17,10 +20,41 @@ pub struct TemplateApp {
 impl Default for TemplateApp {
     fn default() -> Self {
 
-        let mut c1 = Component{name: "6DoF".to_string(), ..Default::default()};
-        let mut c2 = Component{name: "Thermal".to_string(), ..Default::default()};
+        let mut c1 = Component{
+            name: "square".to_string(),
+            eval_expression: String::from("x = y ^ 2"), 
+            required_input: HashMap::from([
+                ("y".to_string(), Value::Float(3.0))
+            ]),
+            required_output: HashMap::from([
+                ("x".to_string(), Value::Float(0.0)),
+            ])
+        };
+
+        let mut c2 = Component{
+            name: "addition".to_string(),
+            eval_expression: String::from("z = x + 100.0 / (a0 + a1)"), 
+            required_input: HashMap::from([
+                ("x".to_string(), Value::Float(9.0)),
+                ("a".to_string(), Value::Vectorf32(vec![5.0, 5.0])),
+            ]),
+            required_output: HashMap::from([
+                ("z".to_string(), Value::Float(0.0)),
+            ])
+            
+        };
+        // Trying to decide how I want the toolchain-component-component-window relationship 
+        //  to work... ultimately I know it's best to separate business and UI logic.
+        //  But what's the cleanest way to map a component *or* toolchain click to the 
+        //  actual process? In C++ this would be pointers everywhere. I'm thinking right now
+        //  just a hash/process ID. That seems clunky to me for some reason...
+        //  Also this should be runable without the GUI at all. Through Rhai, Rust, Python, or 
+        //  otherwise... So I guess just nail down the processes first?
+        let mut tc = Toolchain{components: vec![c1, c2]};
+        let mut cw1 = ComponentWindow{component: c1, pos: Pos2{x: 400.0, y:400.0}};
+        let mut cw2 = ComponentWindow{component: c2, pos: Pos2{x: 400.0, y:800.0}};
         Self {
-            components: vec![c1, c2],
+            components: vec![cw1, cw2],
             line_state: 0.0,
             active_connection: None,
         }
