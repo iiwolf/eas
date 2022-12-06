@@ -16,6 +16,12 @@ pub enum Value{
     // VectorString(Vec<f32>),
 }
 
+impl From<evalexpr::Value> for Value {
+    fn from(value: evalexpr::Value) -> Self {
+        Value::Float(value.as_float().unwrap() as f32)
+    }
+}
+
 // #[derive(serde::Deserialize, serde::Serialize, Debug)]
 #[derive(Debug)]
 pub struct Component{
@@ -52,39 +58,65 @@ impl Component{
         // Create mutable clone
         let mut eval_string = self.eval_expression.clone();
         
-        // Get LHS
-        let mut string_parse = eval_string.split(" = ");
-        let y_var = string_parse.next().unwrap().to_string();
+        // Debug
+        println!("Evaluating expression:    {:?}", eval_string);
 
         // Process RHS, replacing each input variable with value
-        eval_string = string_parse.next().unwrap().to_string();
-        for (variable, value) in input {
-            eval_string = match value {
-                Value::Float(val) => eval_string.replace(variable, &format!("{:?}", val)),
-                Value::Vectorf32(vec32) => {
-                    for (i, value) in vec32.iter().enumerate() {
-                        eval_string = eval_string.replace(
-                            &format!("y{:?}", i), 
-                            &format!("{:?}", value)
-                        );
+        for (variable, value) in &self.required_input {
+
+            if input.contains_key(variable) {
+                eval_string = match value {
+                    Value::Float(val) => eval_string.replace(variable, &format!("{:?}", val)),
+                    Value::Vectorf32(vec32) => {
+                        for (i, value) in vec32.iter().enumerate() {
+                            eval_string = eval_string.replace(
+                                &format!("{}{:?}", variable, i), 
+                                &format!("{:?}", value)
+                            );
+                        }
+                        eval_string
                     }
-                    eval_string
                 }
+            } else {
+                println!("Invalid input: missing input {:?}", variable);
+                return HashMap::new()
             }
             
         }
 
-        // Get result
-        let result = eval(&eval_string);
+        // Debug
+        println!("                          {:?}", eval_string);
+
+        // Create HashMapContext to get multiple assignments
+        let mut context = HashMapContext::new();
+        
+        // Run code
+        let result = eval_with_context_mut(&eval_string, &mut context);
+
+        // Create new hashmap to store variables
+        let mut output_hash = HashMap::new();
+        
+        // evalexpr ran properly
         if result.is_ok() {
-            let r = result.unwrap().as_float().unwrap() as f32;
-            HashMap::from([(y_var, Value::Float(r))])
-            
+
+            // Assign variables from calculation
+            for (variable, value) in context.iter_variables() {
+                
+                if self.required_output.contains_key(&variable) {
+                    // Convert evalexpr::Value to eas::Value
+                    output_hash.insert(variable, Value::from(value));
+                } else {
+                    println!("Warning: unused output variable {:?}", variable);
+                }
+            }
+
+        // evalexpr failed
         }else{
             println!("Failed to run properly!\n\t{:?}", result.unwrap_err());
-            HashMap::new()
         }
-        // .unwrap().as_float()
+
+        // Return output has either way
+        output_hash
     }
 
     // pub fn create_window(&mut self, ctx: &egui::Context, parent_ui: &mut Ui, active_connection: &mut Option<Connection>) {

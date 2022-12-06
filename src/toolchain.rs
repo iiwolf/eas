@@ -9,13 +9,14 @@ impl Toolchain {
     pub fn simulate(&self, input_data: &HashMap<String, Value>) -> Vec<HashMap<String, Value>>{
 
         let mut results: Vec<HashMap<String, Value>> = Vec::new();
-        for (i, component) in self.components.iter().enumerate() {
+        let mut running_data_map = input_data.clone();
+        for component in &self.components {
             
             // Simulate and append to results
-            let result = match i {
-                0 => component.simulate(input_data),
-                _ => component.simulate(&results[results.len()-1]),
-            };
+            let result = component.simulate(&running_data_map);
+            
+            // Update running data with output
+            running_data_map.extend(result.clone());
 
             // Push into vec
             results.push(result);
