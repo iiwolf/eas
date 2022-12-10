@@ -2,8 +2,8 @@ use egui::{Vec2, Pos2};
 use crate::grid::draw_grid;
 use crate::component_window::ComponentWindow;
 use crate::connection::{Connection, CONNECTION_STROKE};
-use eas::component::{Component, Value};
-use eas::toolchain::Toolchain;
+use crate::component::{Component, Value};
+use crate::toolchain::Toolchain;
 use std::collections::HashMap;
 
 const N_MAX_WINDOWS: i32 = 1000;
@@ -50,9 +50,9 @@ impl Default for TemplateApp {
         //  just a hash/process ID. That seems clunky to me for some reason...
         //  Also this should be runable without the GUI at all. Through Rhai, Rust, Python, or 
         //  otherwise... So I guess just nail down the processes first?
-        let mut tc = Toolchain{components: vec![c1, c2]};
-        let mut cw1 = ComponentWindow{component: c1, pos: Pos2{x: 400.0, y:400.0}};
-        let mut cw2 = ComponentWindow{component: c2, pos: Pos2{x: 400.0, y:800.0}};
+        // let mut tc = Toolchain{components: vec![c1, c2]};
+        let mut cw1 = ComponentWindow::new(c1, Pos2{x: 400.0, y:400.0});
+        let mut cw2 = ComponentWindow::new(c2, Pos2{x: 400.0, y:800.0});
         Self {
             components: vec![cw1, cw2],
             line_state: 0.0,
@@ -126,13 +126,13 @@ impl eframe::App for TemplateApp {
                     if ui.button(text).clicked() {
                         
                         // Create unique name
-                        let names = Vec::from_iter(components.iter().map(|c| c.name.to_string()));
+                        let names = Vec::from_iter(components.iter().map(|c| c.name().to_string()));
                         let mut default_name = "Empty".to_string();
                         for counter in 1..N_MAX_WINDOWS{
                             if !names.contains(&default_name){ break; }
                             default_name = format!("Empty_{}", counter);
                         }
-                        components.push(Component::new(default_name));
+                        // components.push(ComponentWindow::new(default_name));
                     }
                 }
             );
@@ -141,10 +141,37 @@ impl eframe::App for TemplateApp {
             // ui_connected_windows(ui, ctx, components);
             for component in components {
                 
-                // // Force component to be in bounds
-                // component.pos = component.pos.max(ui.min_rect().left_top());
-                // component.create_window(ctx, ui, active_connection);
+                // Force component to be in bounds
+                component.pos = component.pos.max(ui.min_rect().left_top());
+                component.create_window(ctx, ui);
                 
+                // Adding arrow
+                let edge_response = ui.allocate_rect(component.highlight_rec,  egui::Sense::click());
+                
+                // Highlight affect on edge hover
+                if edge_response.hovered(){
+                    ui.painter().rect_filled(component.highlight_rec, 0.0, egui::Color32::LIGHT_BLUE);
+                }
+                
+                if edge_response.clicked() {
+
+                    // Start arrow
+                    if active_connection.is_none() {
+                        let pos = edge_response.hover_pos().unwrap();
+                        *active_connection = Some(Connection{p1: pos, p2: pos, connecting: true});
+                    // Finish connection
+                    } 
+                    // else if active_connection.is_some() {
+                    //     self.connections.push(active_connection.take().unwrap());
+                    //     *active_connection = None;
+                    // }
+                }
+                
+                if active_connection.is_some() {
+                    let mut connection = active_connection.as_mut().unwrap();
+                    ui.painter().line_segment([connection.p1, connection.p2], CONNECTION_STROKE);
+                    connection.p2 = ctx.pointer_hover_pos().unwrap();
+                }
                 
                 // // If new component connected
                 // if component.active_connection.is_some() {
