@@ -5,18 +5,16 @@ use crate::connection::{Connection, CONNECTION_STROKE};
 const COMPONENT_SIZE: Vec2 = Vec2{x: 150.0, y: 125.0};
 
 pub struct ComponentWindow {
-    pub component: Component,
     pub pos: Pos2,
     pub highlight_rec: egui::Rect,
 }
 
 impl ComponentWindow {
 
-    pub fn name(&self) -> String { self.component.name.clone() }
+    // pub fn name(&self) -> String { self.component.name.clone() }
 
-    pub fn new(component: Component, pos: Pos2) -> Self {
+    pub fn new(pos: Pos2) -> Self {
         ComponentWindow { 
-            component: component, 
             pos: pos, 
             highlight_rec: egui::Rect { 
                 min: Pos2{x:0.0, y:0.0}, 
@@ -24,8 +22,8 @@ impl ComponentWindow {
             }
         } 
     }
-    pub fn create_window(&mut self, ctx: &egui::Context, parent_ui: &mut Ui) {
-        egui::Window::new(self.name().to_string())
+    pub fn create_window(&mut self, ctx: &egui::Context, parent_ui: &mut Ui, component: &Component) {
+        egui::Window::new(component.name.to_string())
             .title_bar(false)
             .fixed_size(COMPONENT_SIZE)
             .default_pos(self.pos)
@@ -38,7 +36,7 @@ impl ComponentWindow {
                 if response.dragged() {
                     self.pos = self.pos + response.drag_delta();
                 }
-                ui.text_edit_singleline(&mut self.name());
+                ui.text_edit_singleline(&mut component.name.to_string());
                 
                 // Set hightlight rectangle
                 let rect = ui.min_rect();

@@ -2,13 +2,14 @@ use crate::component::{Component, Value};
 use std::{collections::HashMap};
 
 pub struct Toolchain {
-    pub components: Vec<Component>
+    pub components: Vec<Component>,
+    pub is_active: bool,
 }
 
 impl Toolchain {
     
     pub fn new(components: Vec<Component>) -> Self {
-        Toolchain { components: components }
+        Toolchain { components: components, is_active: false }
     }
 
     pub fn simulate(&self, input_data: &HashMap<String, Value>) -> Vec<HashMap<String, Value>>{

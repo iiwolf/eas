@@ -12,38 +12,45 @@ const N_MAX_WINDOWS: i32 = 1000;
 // #[derive(serde::Deserialize, serde::Serialize)]
 // #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
-    components: Vec<ComponentWindow>,
+    toolchains: Vec<Toolchain>,
+    component_windows: Vec<ComponentWindow>,
+    tc_from: Option<usize>,
+    c_from: Option<usize>,
+    tc_to: Option<usize>,
+    c_to: Option<usize>,
     line_state: f32,
-    active_connection: Option<Connection>,
-    toolchain: Option<Toolchain>
 }
 
 impl Default for TemplateApp {
     fn default() -> Self {
 
-        let mut c1 = Component{
-            name: "square".to_string(),
-            eval_expression: String::from("x = y ^ 2"), 
-            required_input: HashMap::from([
-                ("y".to_string(), Value::Float(3.0))
-            ]),
-            required_output: HashMap::from([
-                ("x".to_string(), Value::Float(0.0)),
-            ])
-        };
-
-        let mut c2 = Component{
-            name: "addition".to_string(),
-            eval_expression: String::from("z = x + 100.0 / (a0 + a1)"), 
-            required_input: HashMap::from([
-                ("x".to_string(), Value::Float(9.0)),
-                ("a".to_string(), Value::Vectorf32(vec![5.0, 5.0])),
-            ]),
-            required_output: HashMap::from([
-                ("z".to_string(), Value::Float(0.0)),
-            ])
-            
-        };
+        // TC1 
+        let tc1: Toolchain = Toolchain::new(vec![
+            Component{
+                name: "square".to_string(),
+                eval_expression: String::from("x = y ^ 2"), 
+                required_input: HashMap::from([
+                    ("y".to_string(), Value::Float(3.0))
+                ]),
+                required_output: HashMap::from([
+                    ("x".to_string(), Value::Float(0.0)),
+                ])
+        }]);
+        
+        // TC2
+        let tc2: Toolchain = Toolchain::new(vec![
+            Component{
+                name: "addition".to_string(),
+                eval_expression: String::from("z = x + 100.0 / (a0 + a1)"), 
+                required_input: HashMap::from([
+                    ("x".to_string(), Value::Float(9.0)),
+                    ("a".to_string(), Value::Vectorf32(vec![5.0, 5.0])),
+                ]),
+                required_output: HashMap::from([
+                    ("z".to_string(), Value::Float(0.0)),
+                ])
+        }]);
+        
         // Trying to decide how I want the toolchain-component-component-window relationship 
         //  to work... ultimately I know it's best to separate business and UI logic.
         //  But what's the cleanest way to map a component *or* toolchain click to the 
@@ -52,13 +59,16 @@ impl Default for TemplateApp {
         //  Also this should be runable without the GUI at all. Through Rhai, Rust, Python, or 
         //  otherwise... So I guess just nail down the processes first?
         // let mut tc = Toolchain{components: vec![c1, c2]};
-        let mut cw1 = ComponentWindow::new(c1, Pos2{x: 400.0, y:400.0});
-        let mut cw2 = ComponentWindow::new(c2, Pos2{x: 400.0, y:800.0});
+        let mut cw1 = ComponentWindow::new(Pos2{x: 400.0, y:400.0});
+        let mut cw2 = ComponentWindow::new(Pos2{x: 400.0, y:800.0});
         Self {
-            components: vec![cw1, cw2],
+            toolchains: vec![tc1, tc2],
+            component_windows: vec![cw1, cw2],
+            tc_from: None,
+            c_from: None,
+            tc_to: None,
+            c_to: None,
             line_state: 0.0,
-            active_connection: None,
-            toolchain: None,
         }
     }
 }
@@ -80,10 +90,13 @@ impl eframe::App for TemplateApp {
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let Self {
-            components, 
+            toolchains,
+            component_windows, 
+            tc_from,
+            c_from,
+            tc_to,
+            c_to,
             line_state, 
-            active_connection,
-            toolchain,
         }: &mut TemplateApp = self;
         
         #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
@@ -133,7 +146,13 @@ impl eframe::App for TemplateApp {
                     if ui.button(text).clicked() {
                         
                         // Create unique name
-                        let names = Vec::from_iter(components.iter().map(|c| c.name().to_string()));
+                        let names = Vec::from_iter(
+                            toolchains.iter().map(
+                                |tc| tc.components.iter().map(
+                                    |c| c.name.to_string()
+                               ).collect()
+                            )
+                        );
                         let mut default_name = "Empty".to_string();
                         for counter in 1..N_MAX_WINDOWS{
                             if !names.contains(&default_name){ break; }
@@ -143,82 +162,63 @@ impl eframe::App for TemplateApp {
                     }
                 }
             );
-            
 
-            // ui_connected_windows(ui, ctx, components);
-            for component_window in components {
-                
-                // Force component to be in bounds
-                component_window.pos = component_window.pos.max(ui.min_rect().left_top());
-                component_window.create_window(ctx, ui);
-                
-                // Adding arrow
-                let edge_response = ui.allocate_rect(component_window.highlight_rec,  egui::Sense::click());
-                
-                // Highlight affect on edge hover
-                if edge_response.hovered(){
-                    ui.painter().rect_filled(component_window.highlight_rec, 0.0, egui::Color32::LIGHT_BLUE);
-                }
-                
-                if edge_response.clicked() {
+            for (i, tc) in toolchains.iter().enumerate() {
+                for (j, component) in tc.components.iter().enumerate() {
+                    let window_index = i * (toolchains.len() - 1) + j;
+                    let component_window = &mut component_windows[window_index];
 
-                    // Start arrow
-                    if active_connection.is_none() {
-                        let pos = edge_response.hover_pos().unwrap();
-                        let connection = Connection::new(pos,pos);
-                        connection.from = Some(component_window);
-                        *active_connection = Some(connection);
-                    // Finish connection
-                    } 
-                    else if active_connection.is_some() {
-                        // let to_component = active_connection.take().unwrap()
-                        // self.connections.push();
-                        let from = active_connection.take().unwrap().from.take().unwrap();
-                        // let new_components: Vec<ComponentWindow> = ;
-                        if toolchain.is_none() {
-                            let new_components: Vec<Component> = vec![from.component, component_window.component];
-                            let new_toolchain: Toolchain = Toolchain::new(new_components);
-                            *toolchain = Some(new_toolchain);
-                        }
-                        *active_connection = None;
+                    // Force component to be in bounds
+                    component_window.pos = component_window.pos.max(ui.min_rect().left_top());
+                    component_window.create_window(ctx, ui, component);
+                    
+                    // Adding arrow
+                    let edge_response = ui.allocate_rect(component_window.highlight_rec,  egui::Sense::click());
+                    
+                    // Highlight affect on edge hover
+                    if edge_response.hovered(){
+                        ui.painter().rect_filled(component_window.highlight_rec, 0.0, egui::Color32::LIGHT_BLUE);
                     }
+                    
+                    if edge_response.clicked() {
+
+                        // Start arrow
+                        if tc_from.is_none() {
+                            *tc_from = Some(i);
+                            *c_from = Some(j);
+                        } 
+
+                        // Finish connection
+                        else if tc_from.is_some() {
+                            *tc_to = Some(i);
+                            *c_to = Some(j);
+                        }
+                    }
+
                 }
-                
-                if active_connection.is_some() {
-                    let mut connection = active_connection.as_mut().unwrap();
-                    ui.painter().line_segment([connection.p1, connection.p2], CONNECTION_STROKE);
-                    connection.p2 = ctx.pointer_hover_pos().unwrap();
-                }
-                
-                // // If new component connected
-                // if component.active_connection.is_some() {
-
-                // }
-
-                // // Create connection
-                // ui.painter().line_segment(
-                //     [
-                //         component.pos + COMPONENT_SIZE / 2.0,
-                //         child_component.pos + COMPONENT_SIZE / 2.0],
-                //     CONNECTION_STROKE
-                // );   
-
-
             }
-            
 
+            // toolchains[0].components.insert(active_index, element)
+            if tc_from.is_some() && tc_to.is_some() {
+
+                // Take from other toolchain and place into new one
+                let component_to_take = toolchains[tc_to.unwrap()].components.swap_remove(c_to.unwrap());
+                toolchains[tc_from.unwrap()].components.push(component_to_take);
+
+                // Clear connection
+                *tc_from = None;
+                *c_from = None;
+                *tc_to = None;
+                *c_to = None;
+            }
+            else if tc_from.is_some() {
+                // let mut connection = tc_from.as_mut().unwrap();
+                let window_index = tc_from.unwrap() * toolchains.len() + c_from.unwrap();
+                let p1 = component_windows[window_index].pos;
+                let p2 = ctx.pointer_hover_pos().unwrap();
+                ui.painter().line_segment([p1, p2], CONNECTION_STROKE);
+            }
 
         });
-        
-        
-
-        if false {
-            egui::Window::new("Window").show(ctx, |ui| {
-                ui.label("Windows can be moved by dragging them.");
-                ui.label("They are automatically sized based on contents.");
-                ui.label("You can turn on resizing and scrolling if you like.");
-                ui.label("You would normally chose either panels OR windows.");
-            });
-        }
     }
 }
