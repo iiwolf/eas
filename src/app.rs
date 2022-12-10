@@ -14,7 +14,8 @@ const N_MAX_WINDOWS: i32 = 1000;
 pub struct TemplateApp {
     components: Vec<ComponentWindow>,
     line_state: f32,
-    active_connection: Option<Connection>
+    active_connection: Option<Connection>,
+    toolchain: Option<Toolchain>
 }
 
 impl Default for TemplateApp {
@@ -57,6 +58,7 @@ impl Default for TemplateApp {
             components: vec![cw1, cw2],
             line_state: 0.0,
             active_connection: None,
+            toolchain: None,
         }
     }
 }
@@ -77,12 +79,17 @@ impl eframe::App for TemplateApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let Self {components, line_state, active_connection} = self;
+        let Self {
+            components, 
+            line_state, 
+            active_connection,
+            toolchain,
+        }: &mut TemplateApp = self;
         
         #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
         egui::TopBottomPanel::top("top_panel").show(ctx, |ui| {
             // The top panel is often a good place for a menu bar:
-            egui::menu::bar(ui, |ui| {
+            egui::menu::bar(ui, |ui: &mut egui::Ui| {
                 ui.menu_button("File", |ui| {
                     if ui.button("Quit").clicked() {
                         _frame.close();
@@ -139,18 +146,18 @@ impl eframe::App for TemplateApp {
             
 
             // ui_connected_windows(ui, ctx, components);
-            for component in components {
+            for component_window in components {
                 
                 // Force component to be in bounds
-                component.pos = component.pos.max(ui.min_rect().left_top());
-                component.create_window(ctx, ui);
+                component_window.pos = component_window.pos.max(ui.min_rect().left_top());
+                component_window.create_window(ctx, ui);
                 
                 // Adding arrow
-                let edge_response = ui.allocate_rect(component.highlight_rec,  egui::Sense::click());
+                let edge_response = ui.allocate_rect(component_window.highlight_rec,  egui::Sense::click());
                 
                 // Highlight affect on edge hover
                 if edge_response.hovered(){
-                    ui.painter().rect_filled(component.highlight_rec, 0.0, egui::Color32::LIGHT_BLUE);
+                    ui.painter().rect_filled(component_window.highlight_rec, 0.0, egui::Color32::LIGHT_BLUE);
                 }
                 
                 if edge_response.clicked() {
@@ -158,13 +165,23 @@ impl eframe::App for TemplateApp {
                     // Start arrow
                     if active_connection.is_none() {
                         let pos = edge_response.hover_pos().unwrap();
-                        *active_connection = Some(Connection{p1: pos, p2: pos, connecting: true});
+                        let connection = Connection::new(pos,pos);
+                        connection.from = Some(component_window);
+                        *active_connection = Some(connection);
                     // Finish connection
                     } 
-                    // else if active_connection.is_some() {
-                    //     self.connections.push(active_connection.take().unwrap());
-                    //     *active_connection = None;
-                    // }
+                    else if active_connection.is_some() {
+                        // let to_component = active_connection.take().unwrap()
+                        // self.connections.push();
+                        let from = active_connection.take().unwrap().from.take().unwrap();
+                        // let new_components: Vec<ComponentWindow> = ;
+                        if toolchain.is_none() {
+                            let new_components: Vec<Component> = vec![from.component, component_window.component];
+                            let new_toolchain: Toolchain = Toolchain::new(new_components);
+                            *toolchain = Some(new_toolchain);
+                        }
+                        *active_connection = None;
+                    }
                 }
                 
                 if active_connection.is_some() {

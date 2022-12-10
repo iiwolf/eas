@@ -6,6 +6,11 @@ pub struct Toolchain {
 }
 
 impl Toolchain {
+    
+    pub fn new(components: Vec<Component>) -> Self {
+        Toolchain { components: components }
+    }
+
     pub fn simulate(&self, input_data: &HashMap<String, Value>) -> Vec<HashMap<String, Value>>{
 
         let mut results: Vec<HashMap<String, Value>> = Vec::new();
