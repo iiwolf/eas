@@ -8,16 +8,14 @@ use std::collections::HashMap;
 
 const N_MAX_WINDOWS: i32 = 1000;
 
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 // #[derive(serde::Deserialize, serde::Serialize)]
 // #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
     toolchains: Vec<Toolchain>,
     component_windows: Vec<ComponentWindow>,
-    tc_from: Option<usize>,
-    c_from: Option<usize>,
-    tc_to: Option<usize>,
-    c_to: Option<usize>,
+    active_connection: Connection,
     line_state: f32,
 }
 
@@ -64,10 +62,7 @@ impl Default for TemplateApp {
         Self {
             toolchains: vec![tc1, tc2],
             component_windows: vec![cw1, cw2],
-            tc_from: None,
-            c_from: None,
-            tc_to: None,
-            c_to: None,
+            active_connection: Connection::default(),
             line_state: 0.0,
         }
     }
@@ -92,10 +87,7 @@ impl eframe::App for TemplateApp {
         let Self {
             toolchains,
             component_windows, 
-            tc_from,
-            c_from,
-            tc_to,
-            c_to,
+            active_connection,
             line_state, 
         }: &mut TemplateApp = self;
         
@@ -135,7 +127,7 @@ impl eframe::App for TemplateApp {
             ui.heading("Studio Floor");
             egui::warn_if_debug_build(ui);
             draw_grid(ui, egui::Stroke{width: 1.0, color: egui::Color32::from_gray(60)}, line_state);
-
+            let central_panel_ui = &ui;
             let parent_rect = ui.min_rect().right_bottom();
             let pos = parent_rect - Pos2{x:100.0, y:100.0}.to_vec2();
             let text = egui::RichText::new("Add Component").font(egui::FontId::proportional(40.0));
@@ -158,20 +150,33 @@ impl eframe::App for TemplateApp {
                             if !names.contains(&default_name){ break; }
                             default_name = format!("Empty_{}", counter);
                         }
-                        // components.push(ComponentWindow::new(default_name));
+                        toolchains.push(Toolchain::new(vec![Component::new(default_name)]));
+                        component_windows.push(ComponentWindow::new(central_panel_ui.min_rect().left_top()));
                     }
                 }
             );
+            
+            let mut window_index = 0;
 
             for (i, tc) in toolchains.iter().enumerate() {
                 for (j, component) in tc.components.iter().enumerate() {
-                    let window_index = i * (toolchains.len() - 1) + j;
+
+                    // Draw connection (do BEFORE getting mutable reference)
+                    if j > 0 {
+                        let prev_window = &component_windows[window_index  - 1];
+                        let cur_window = &component_windows[window_index];
+                        let p1 = prev_window.center();
+                        let p2 = cur_window.center();
+                        ui.painter().line_segment([p1, p2], CONNECTION_STROKE);
+                    }
+                    
+                    // Get mutable reference to current window
                     let component_window = &mut component_windows[window_index];
 
                     // Force component to be in bounds
                     component_window.pos = component_window.pos.max(ui.min_rect().left_top());
-                    component_window.create_window(ctx, ui, component);
-                    
+                    component_window.create_window(ctx, component);
+                     
                     // Adding arrow
                     let edge_response = ui.allocate_rect(component_window.highlight_rec,  egui::Sense::click());
                     
@@ -183,41 +188,43 @@ impl eframe::App for TemplateApp {
                     if edge_response.clicked() {
 
                         // Start arrow
-                        if tc_from.is_none() {
-                            *tc_from = Some(i);
-                            *c_from = Some(j);
+                        if active_connection.tc_from.is_none() {
+                            active_connection.tc_from = Some(i);
+                            active_connection.c_from = Some(j);
+                            active_connection.windex = Some(window_index.clone());
                         } 
 
                         // Finish connection
-                        else if tc_from.is_some() {
-                            *tc_to = Some(i);
-                            *c_to = Some(j);
+                        else if active_connection.tc_from.is_some() {
+                            active_connection.tc_to = Some(i);
+                            active_connection.c_to = Some(j);
                         }
                     }
 
+                    // Increment window index
+                    window_index += 1;
                 }
             }
 
             // toolchains[0].components.insert(active_index, element)
-            if tc_from.is_some() && tc_to.is_some() {
+            if active_connection.tc_from.is_some() && active_connection.tc_to.is_some() {
 
                 // Take from other toolchain and place into new one
-                let component_to_take = toolchains[tc_to.unwrap()].components.swap_remove(c_to.unwrap());
-                toolchains[tc_from.unwrap()].components.push(component_to_take);
+                let component_to_take = toolchains[active_connection.tc_to.unwrap()].components.swap_remove(active_connection.c_to.unwrap());
+                toolchains[active_connection.tc_from.unwrap()].components.push(component_to_take);
 
                 // Clear connection
-                *tc_from = None;
-                *c_from = None;
-                *tc_to = None;
-                *c_to = None;
+                active_connection.reset();
             }
-            else if tc_from.is_some() {
+            else if active_connection.tc_from.is_some() {
                 // let mut connection = tc_from.as_mut().unwrap();
-                let window_index = tc_from.unwrap() * toolchains.len() + c_from.unwrap();
-                let p1 = component_windows[window_index].pos;
-                let p2 = ctx.pointer_hover_pos().unwrap();
-                ui.painter().line_segment([p1, p2], CONNECTION_STROKE);
+                if active_connection.windex.is_some() && ctx.pointer_hover_pos().is_some() {
+                    let p1 = component_windows[active_connection.windex.unwrap()].center();
+                    let p2 = ctx.pointer_hover_pos().unwrap();
+                    ui.painter().line_segment([p1, p2], CONNECTION_STROKE);
+                }
             }
+
 
         });
     }
