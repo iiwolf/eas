@@ -10,7 +10,8 @@ pub struct ComponentWindow {
     pub size: Vec2,
     pub highlight_rec: egui::Rect,
     pub expanded: bool,
-    texture: Option<egui::TextureHandle>
+    maximize_texture: Option<egui::TextureHandle>,
+    minimize_texture: Option<egui::TextureHandle>,
 }
 
 impl ComponentWindow {
@@ -18,18 +19,6 @@ impl ComponentWindow {
     // pub fn name(&self) -> String { self.component.name.clone() }
 
     pub fn new(pos: Pos2) -> Self {
-        let maximize_texture: &egui::TextureHandle = self.maximize_texture.get_or_insert_with(|| {
-            // Load the texture only once.
-            ui.ctx().load_texture(
-                "expanded",
-                egui::ColorImage::example(),
-                Default::default()
-            )
-        });
-
-        let maximize_texture: &egui::TextureHandle = self.maximize_texture.get_or_insert_with(|| {
-            // Load the texture only once.
-        });
 
         ComponentWindow { 
             pos: pos, 
@@ -39,16 +28,8 @@ impl ComponentWindow {
                 max: Pos2{x:10.0, y:10.0} 
             },
             expanded: false,
-            maximize_texture: ui.ctx().load_texture(
-                "maximize",
-                egui::ColorImage::example(),
-                Default::default()
-            ),
-            minimize_texture: ui.ctx().load_texture(
-                "minimize",
-                egui::ColorImage::example(),
-                Default::default()
-            ),
+            maximize_texture: None,
+            minimize_texture: None,
         } 
     }
 
@@ -68,20 +49,25 @@ impl ComponentWindow {
             .show(ctx, |ui| {
                 
                 let maximize_texture: &egui::TextureHandle = self.maximize_texture.get_or_insert_with(|| {
-                    // Load the texture only once.
                     ui.ctx().load_texture(
-                        "expanded",
+                        "maximize",
+                        egui::ColorImage::example(),
+                        Default::default()
+                    )
+                });
+
+                let minimize_texture: &egui::TextureHandle = self.minimize_texture.get_or_insert_with(|| {
+                    ui.ctx().load_texture(
+                        "minimize",
                         egui::ColorImage::example(),
                         Default::default()
                     )
                 });
 
                 // Load exapnded button texture
-                // let texture: &egui::TextureHandle = ui.ctx().load_texture("icon-256.png", egui::ColorImage::example(), Default::default());
-
-                let img_size = 16.0 * texture.size_vec2() / texture.size_vec2().y;
-
-                if ui.add(egui::ImageButton::new(texture, img_size)).clicked() {
+                let img_size = 16.0 * minimize_texture.size_vec2() / minimize_texture.size_vec2().y;
+                
+                if ui.add(egui::ImageButton::new(minimize_texture, img_size)).clicked() {
                     self.expanded = !self.expanded;
                 }
 

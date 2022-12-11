@@ -66,6 +66,7 @@ impl Default for TemplateApp {
             component_windows: vec![cw1, cw2],
             active_connection: Connection::default(),
             line_state: 0.0,
+            green_arrow_texture: None,
         }
     }
 }
@@ -91,6 +92,7 @@ impl eframe::App for TemplateApp {
             component_windows, 
             active_connection,
             line_state, 
+            green_arrow_texture,
         }: &mut TemplateApp = self;
         
         #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
@@ -138,7 +140,7 @@ impl eframe::App for TemplateApp {
             // Buttons
             let text = egui::RichText::new("Add Component").font(egui::FontId::proportional(40.0));
             
-            let green_arrow_texture: &egui::TextureHandle = self.texture.get_or_insert_with(|| {
+            let green_arrow_texture: &egui::TextureHandle = green_arrow_texture.get_or_insert_with(|| {
                     // Load the texture only once.
                     ui.ctx().load_texture(
                         "my-image",
