@@ -183,8 +183,8 @@ impl eframe::App for TemplateApp {
             
             let mut window_index = 0;
 
-            for (i, tc) in toolchains.iter().enumerate() {
-                for (j, component) in tc.components.iter().enumerate() {
+            for (i, tc) in toolchains.iter_mut().enumerate() {
+                for (j, component) in tc.components.iter_mut().enumerate() {
 
                     // Draw connection (do BEFORE getting mutable reference)
                     if j > 0 {

@@ -1,5 +1,5 @@
 use egui::{Pos2, Vec2, Color32, Ui, Stroke, TextEdit, NumExt};
-use crate::component::Component;
+use crate::component::{Component, Value};
 use crate::connection::{Connection, CONNECTION_STROKE};
 
 const MINIMIZED_COMPONENT_SIZE: Vec2 = Vec2{x: 150.0, y: 125.0};
@@ -40,7 +40,7 @@ impl ComponentWindow {
         }
     }
 
-    pub fn create_window(&mut self, ctx: &egui::Context, component: &Component) {
+    pub fn create_window(&mut self, ctx: &egui::Context, component: &mut Component) {
         egui::Window::new(component.name.to_string())
             .title_bar(false)
             .fixed_size(if self.expanded { EXPANDED_COMPONENT_SIZE } else { MINIMIZED_COMPONENT_SIZE } )
@@ -66,11 +66,31 @@ impl ComponentWindow {
 
                 // Load exapnded button texture
                 let img_size = 16.0 * minimize_texture.size_vec2() / minimize_texture.size_vec2().y;
-                
                 if ui.add(egui::ImageButton::new(minimize_texture, img_size)).clicked() {
                     self.expanded = !self.expanded;
                 }
+                
+                // If expanded, add entry boxes
+                if self.expanded {
+                    for (name, value) in &mut component.required_input {
 
+                        match value {
+                            Value::Float(val) => {
+                                ui.label(name.to_string());
+                                ui.add(egui::DragValue::new(val).speed(1.0));
+                                ui.end_row();                
+                            },
+                            Value::Vectorf32(values) => {
+                                ui.label(name.to_string());
+                                for val in values{
+                                    ui.add(egui::DragValue::new(val).speed(1.0));
+                                    ui.end_row();     
+                                }           
+
+                            }
+                        }
+                    }
+                }
                 // Drag
                 let response = ui.allocate_response(ui.available_size(), egui::Sense::click_and_drag());
                 if response.dragged() {
