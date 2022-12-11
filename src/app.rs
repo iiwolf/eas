@@ -59,8 +59,8 @@ impl Default for TemplateApp {
         //  Also this should be runable without the GUI at all. Through Rhai, Rust, Python, or 
         //  otherwise... So I guess just nail down the processes first?
         // let mut tc = Toolchain{components: vec![c1, c2]};
-        let mut cw1 = ComponentWindow::new(Pos2{x: 400.0, y:400.0});
-        let mut cw2 = ComponentWindow::new(Pos2{x: 400.0, y:800.0});
+        let cw1 = ComponentWindow::new(Pos2{x: 400.0, y:400.0});
+        let cw2 = ComponentWindow::new(Pos2{x: 400.0, y:800.0});
         Self {
             toolchains: vec![tc1, tc2],
             component_windows: vec![cw1, cw2],

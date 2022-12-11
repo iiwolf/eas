@@ -12,7 +12,10 @@ rust-version = "1.60"
 rand = "0.8.5"
 evalexpr = "8.1.0"
 egui = "0.19.0"
+egui_extras = { version = "0.20.0", features = ["image"] }
+image = { version = "0.24", features = ["jpeg", "png"] }
 eframe = { version = "0.19.0", features = ["persistence"] }
+
 
 # You only need serde if you want app persistence:
 serde = { version = "1", features = ["derive"] }

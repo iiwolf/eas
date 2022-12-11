@@ -1,7 +1,8 @@
 use std::collections::HashMap;
-use egui::{Pos2, Vec2, Color32, Ui, Stroke, TextEdit, NumExt};
+use egui::{Pos2, Vec2, Ui};
+use egui_extras::RetainedImage;
+
 use crate::component::{Component, Value};
-use crate::connection::{Connection, CONNECTION_STROKE};
 
 const MINIMIZED_COMPONENT_SIZE: Vec2 = Vec2{x: 150.0, y: 125.0};
 const EXPANDED_COMPONENT_SIZE: Vec2 = Vec2{x: 400.0, y: 350.0};
@@ -14,6 +15,8 @@ pub struct ComponentWindow {
     maximize_texture: Option<egui::TextureHandle>,
     minimize_texture: Option<egui::TextureHandle>,
     run_texture: Option<egui::TextureHandle>,
+    maximize_image: RetainedImage,
+    minimize_image: RetainedImage,
 }
 
 fn rows_from_hash(ui: &mut Ui, variables: &mut HashMap<String, Value>) {
@@ -53,6 +56,8 @@ impl ComponentWindow {
             maximize_texture: None,
             minimize_texture: None,
             run_texture: None,
+            maximize_image: RetainedImage::from_image_bytes("maximize.png", include_bytes!("../assets/maximize.png")).unwrap(),
+            minimize_image: RetainedImage::from_image_bytes("maximize.png", include_bytes!("../assets/minimize.png")).unwrap(),
         } 
     }
 
@@ -76,24 +81,6 @@ impl ComponentWindow {
                 if response.dragged() {
                     self.pos = self.pos + response.drag_delta();
                 }
-                ui.text_edit_singleline(&mut component.name.to_string());
-                
-
-                let maximize_texture: &egui::TextureHandle = self.maximize_texture.get_or_insert_with(|| {
-                    ui.ctx().load_texture(
-                        "maximize",
-                        egui::ColorImage::example(),
-                        Default::default()
-                    )
-                });
-
-                let minimize_texture: &egui::TextureHandle = self.minimize_texture.get_or_insert_with(|| {
-                    ui.ctx().load_texture(
-                        "minimize",
-                        egui::ColorImage::example(),
-                        Default::default()
-                    )
-                });
 
                 let run_texture: &egui::TextureHandle = self.maximize_texture.get_or_insert_with(|| {
                     ui.ctx().load_texture(
@@ -104,24 +91,49 @@ impl ComponentWindow {
                 });
 
                 // Load exapnded button texture
-                let img_size = 16.0 * minimize_texture.size_vec2() / minimize_texture.size_vec2().y;
+                // let img_size = 16.0 * minimize_texture.size_vec2() / minimize_texture.size_vec2().y;
                 
-                // If run clicked
-                if ui.add(egui::ImageButton::new(run_texture, img_size)).clicked() {
-                    let input = &component.required_input;
-                    component.required_output = component.simulate(input);
-                }
+                // // If run clicked
+                // if ui.add(egui::ImageButton::new(run_texture, img_size)).clicked() {
+                //     let input = &component.required_input;
+                //     component.required_output = component.simulate(input);
+                // }
 
                 // Min/Maxmize
-                if ui.add(egui::ImageButton::new(minimize_texture, img_size)).clicked() {
-                    self.expanded = !self.expanded;
-                }
+                // if ui.add(egui::ImageButton::new(minimize_texture, img_size)).clicked() {
+                //     self.expanded = !self.expanded;
+                // }
 
-
+                let test_image = RetainedImage::from_image_bytes("maximize.png", include_bytes!("../assets/maximize.png")).unwrap();
+                let test_button = egui::ImageButton::new(
+                    test_image.texture_id(ctx),
+                    test_image.size_vec2()
+                );
+            
                 // If expanded, add entry boxes
                 if self.expanded {
+                    let image = egui::ImageButton::new(
+                        self.minimize_image.texture_id(ctx),
+                        self.minimize_image.size_vec2()
+                    );
+                    // Minimize button + click
+                    // if ui.add(egui::ImageButton::new(
+                    //     self.minimize_image.texture_id(ctx),
+                    //     self.minimize_image.size_vec2()
+                    // )).clicked(){
+                    //     self.expanded = false;
+                    // }
                     rows_from_hash(ui, &mut component.required_input);
                     rows_from_hash(ui, &mut component.required_output);
+                } else {
+
+                    // Maximize button + click
+                    // if ui.add(egui::ImageButton::new(
+                    //     self.maximize_image.texture_id(ctx),
+                    //     self.maximize_image.size_vec2()
+                    // )).clicked(){
+                    //     self.expanded = true;
+                    // }
                 }
 
                 // Set hightlight rectangle
@@ -130,6 +142,8 @@ impl ComponentWindow {
                 min.x -= 20.0;
                 let mut max = rect.right_bottom();
                 max.x += 20.0;
+
+                ui.text_edit_singleline(&mut component.name.to_string());
 
                 self.highlight_rec = egui::Rect{min:min, max:max};
 
