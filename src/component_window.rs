@@ -12,11 +12,9 @@ pub struct ComponentWindow {
     pub size: Vec2,
     pub highlight_rec: egui::Rect,
     pub expanded: bool,
-    maximize_texture: Option<egui::TextureHandle>,
-    minimize_texture: Option<egui::TextureHandle>,
-    run_texture: Option<egui::TextureHandle>,
     maximize_image: RetainedImage,
     minimize_image: RetainedImage,
+    run_image: RetainedImage,
 }
 
 fn rows_from_hash(ui: &mut Ui, variables: &mut HashMap<String, Value>) {
@@ -53,11 +51,9 @@ impl ComponentWindow {
                 max: Pos2{x:10.0, y:10.0} 
             },
             expanded: false,
-            maximize_texture: None,
-            minimize_texture: None,
-            run_texture: None,
             maximize_image: RetainedImage::from_image_bytes("maximize.png", include_bytes!("../assets/maximize.png")).unwrap(),
             minimize_image: RetainedImage::from_image_bytes("maximize.png", include_bytes!("../assets/minimize.png")).unwrap(),
+            run_image: RetainedImage::from_image_bytes("maximize.png", include_bytes!("../assets/triangle.png")).unwrap(),
         } 
     }
 
@@ -82,58 +78,40 @@ impl ComponentWindow {
                     self.pos = self.pos + response.drag_delta();
                 }
 
-                let run_texture: &egui::TextureHandle = self.maximize_texture.get_or_insert_with(|| {
-                    ui.ctx().load_texture(
-                        "run",
-                        egui::ColorImage::example(),
-                        Default::default()
-                    )
-                });
-
                 // Load exapnded button texture
                 // let img_size = 16.0 * minimize_texture.size_vec2() / minimize_texture.size_vec2().y;
                 
-                // // If run clicked
-                // if ui.add(egui::ImageButton::new(run_texture, img_size)).clicked() {
-                //     let input = &component.required_input;
-                //     component.required_output = component.simulate(input);
-                // }
+                // If run clicked
+                if ui.add(egui::ImageButton::new(
+                    self.minimize_image.texture_id(ctx),
+                    self.minimize_image.size_vec2()
+                )).clicked(){
+                    let input = &component.required_input;
+                    component.required_output = component.simulate(input);
+                }
 
-                // Min/Maxmize
-                // if ui.add(egui::ImageButton::new(minimize_texture, img_size)).clicked() {
-                //     self.expanded = !self.expanded;
-                // }
-
-                let test_image = RetainedImage::from_image_bytes("maximize.png", include_bytes!("../assets/maximize.png")).unwrap();
-                let test_button = egui::ImageButton::new(
-                    test_image.texture_id(ctx),
-                    test_image.size_vec2()
-                );
-            
                 // If expanded, add entry boxes
                 if self.expanded {
-                    let image = egui::ImageButton::new(
+
+                    // Minimize button + click
+                    if ui.add(egui::ImageButton::new(
                         self.minimize_image.texture_id(ctx),
                         self.minimize_image.size_vec2()
-                    );
-                    // Minimize button + click
-                    // if ui.add(egui::ImageButton::new(
-                    //     self.minimize_image.texture_id(ctx),
-                    //     self.minimize_image.size_vec2()
-                    // )).clicked(){
-                    //     self.expanded = false;
-                    // }
+                    )).clicked(){
+                        self.expanded = false;
+                    }
+
                     rows_from_hash(ui, &mut component.required_input);
                     rows_from_hash(ui, &mut component.required_output);
                 } else {
 
                     // Maximize button + click
-                    // if ui.add(egui::ImageButton::new(
-                    //     self.maximize_image.texture_id(ctx),
-                    //     self.maximize_image.size_vec2()
-                    // )).clicked(){
-                    //     self.expanded = true;
-                    // }
+                    if ui.add(egui::ImageButton::new(
+                        self.maximize_image.texture_id(ctx),
+                        self.maximize_image.size_vec2()
+                    )).clicked(){
+                        self.expanded = true;
+                    }
                 }
 
                 // Set hightlight rectangle
