@@ -3,11 +3,13 @@ use crate::component::Component;
 use crate::connection::{Connection, CONNECTION_STROKE};
 
 const COMPONENT_SIZE: Vec2 = Vec2{x: 150.0, y: 125.0};
+const EXPANDED_COMPONENT_SIZE: Vec2 = Vec2{x: 400.0, y: 350.0};
 
 pub struct ComponentWindow {
     pub pos: Pos2,
     pub size: Vec2,
     pub highlight_rec: egui::Rect,
+    pub expanded: bool,
 }
 
 impl ComponentWindow {
@@ -21,7 +23,8 @@ impl ComponentWindow {
             highlight_rec: egui::Rect { 
                 min: Pos2{x:0.0, y:0.0}, 
                 max: Pos2{x:10.0, y:10.0} 
-            }
+            },
+            expanded: false
         } 
     }
 
@@ -40,7 +43,9 @@ impl ComponentWindow {
             .current_pos(self.pos)
             .show(ctx, |ui| {
                 
-
+                if ui.button("Expand").clicked() {
+                    self.expanded = true;
+                }
                 // Drag
                 let response = ui.allocate_response(ui.available_size(), egui::Sense::click_and_drag());
                 if response.dragged() {

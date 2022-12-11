@@ -126,11 +126,23 @@ impl eframe::App for TemplateApp {
             // The central panel the region left after adding TopPanel's and SidePanel's
             ui.heading("Studio Floor");
             egui::warn_if_debug_build(ui);
+
+            // Grid
             draw_grid(ui, egui::Stroke{width: 1.0, color: egui::Color32::from_gray(60)}, line_state);
+            
+            // For nested components to dplace themselves correctly
             let central_panel_ui = &ui;
-            let parent_rect = ui.min_rect().right_bottom();
-            let pos = parent_rect - Pos2{x:100.0, y:100.0}.to_vec2();
+            
+            // Buttons
             let text = egui::RichText::new("Add Component").font(egui::FontId::proportional(40.0));
+            
+            // Run *selected* toolchain -> need to be able to enter parameters first!
+            if ui.button("Run").clicked() {
+                if toolchains.len() > 0 {
+                    toolchains[0].simulate();
+                }
+            }
+
             ctx.request_repaint();
             egui::Area::new("add_button_area")
                 .anchor(egui::Align2::RIGHT_BOTTOM, Vec2{x:-100.0, y:-100.0})
