@@ -17,6 +17,8 @@ pub struct TemplateApp {
     component_windows: Vec<ComponentWindow>,
     active_connection: Connection,
     line_state: f32,
+    green_arrow_texture: Option<egui::TextureHandle>
+
 }
 
 impl Default for TemplateApp {
@@ -136,12 +138,21 @@ impl eframe::App for TemplateApp {
             // Buttons
             let text = egui::RichText::new("Add Component").font(egui::FontId::proportional(40.0));
             
+            let green_arrow_texture: &egui::TextureHandle = self.texture.get_or_insert_with(|| {
+                    // Load the texture only once.
+                    ui.ctx().load_texture(
+                        "my-image",
+                        egui::ColorImage::example(),
+                        Default::default()
+                    )
+                });
+
             // Run *selected* toolchain -> need to be able to enter parameters first!
-            if ui.button("Run").clicked() {
-                if toolchains.len() > 0 {
-                    toolchains[0].simulate();
-                }
-            }
+            // if ui.button("Run").clicked() {
+            //     if toolchains.len() > 0 {
+            //         toolchains[0].simulate();
+            //     }
+            // }
 
             ctx.request_repaint();
             egui::Area::new("add_button_area")
