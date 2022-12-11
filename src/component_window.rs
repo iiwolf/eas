@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use egui::{Pos2, Vec2, Color32, Ui, Stroke, TextEdit, NumExt};
 use crate::component::{Component, Value};
 use crate::connection::{Connection, CONNECTION_STROKE};
@@ -12,8 +13,29 @@ pub struct ComponentWindow {
     pub expanded: bool,
     maximize_texture: Option<egui::TextureHandle>,
     minimize_texture: Option<egui::TextureHandle>,
+    run_texture: Option<egui::TextureHandle>,
 }
 
+fn rows_from_hash(ui: &mut Ui, variables: &mut HashMap<String, Value>) {
+    for (name, value) in variables {
+
+        match value {
+            Value::Float(val) => {
+                ui.label(name.to_string());
+                ui.add(egui::DragValue::new(val).speed(1.0));
+                ui.end_row();                
+            },
+            Value::Vectorf32(values) => {
+                ui.label(name.to_string());
+                for val in values{
+                    ui.add(egui::DragValue::new(val).speed(1.0));
+                    ui.end_row();     
+                }           
+
+            }
+        }
+    }
+}
 impl ComponentWindow {
 
     // pub fn name(&self) -> String { self.component.name.clone() }
@@ -30,6 +52,7 @@ impl ComponentWindow {
             expanded: false,
             maximize_texture: None,
             minimize_texture: None,
+            run_texture: None,
         } 
     }
 
@@ -47,7 +70,15 @@ impl ComponentWindow {
             .default_pos(self.pos)
             .current_pos(self.pos)
             .show(ctx, |ui| {
+
+                // Drag
+                let response = ui.allocate_response(ui.available_size(), egui::Sense::click_and_drag());
+                if response.dragged() {
+                    self.pos = self.pos + response.drag_delta();
+                }
+                ui.text_edit_singleline(&mut component.name.to_string());
                 
+
                 let maximize_texture: &egui::TextureHandle = self.maximize_texture.get_or_insert_with(|| {
                     ui.ctx().load_texture(
                         "maximize",
@@ -64,40 +95,35 @@ impl ComponentWindow {
                     )
                 });
 
+                let run_texture: &egui::TextureHandle = self.maximize_texture.get_or_insert_with(|| {
+                    ui.ctx().load_texture(
+                        "run",
+                        egui::ColorImage::example(),
+                        Default::default()
+                    )
+                });
+
                 // Load exapnded button texture
                 let img_size = 16.0 * minimize_texture.size_vec2() / minimize_texture.size_vec2().y;
+                
+                // If run clicked
+                if ui.add(egui::ImageButton::new(run_texture, img_size)).clicked() {
+                    let input = &component.required_input;
+                    component.required_output = component.simulate(input);
+                }
+
+                // Min/Maxmize
                 if ui.add(egui::ImageButton::new(minimize_texture, img_size)).clicked() {
                     self.expanded = !self.expanded;
                 }
-                
+
+
                 // If expanded, add entry boxes
                 if self.expanded {
-                    for (name, value) in &mut component.required_input {
-
-                        match value {
-                            Value::Float(val) => {
-                                ui.label(name.to_string());
-                                ui.add(egui::DragValue::new(val).speed(1.0));
-                                ui.end_row();                
-                            },
-                            Value::Vectorf32(values) => {
-                                ui.label(name.to_string());
-                                for val in values{
-                                    ui.add(egui::DragValue::new(val).speed(1.0));
-                                    ui.end_row();     
-                                }           
-
-                            }
-                        }
-                    }
+                    rows_from_hash(ui, &mut component.required_input);
+                    rows_from_hash(ui, &mut component.required_output);
                 }
-                // Drag
-                let response = ui.allocate_response(ui.available_size(), egui::Sense::click_and_drag());
-                if response.dragged() {
-                    self.pos = self.pos + response.drag_delta();
-                }
-                ui.text_edit_singleline(&mut component.name.to_string());
-                
+
                 // Set hightlight rectangle
                 let rect = ui.min_rect();
                 let mut min = rect.right_top();
