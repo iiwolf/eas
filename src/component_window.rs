@@ -6,6 +6,7 @@ use crate::component::{Component, Value};
 
 const MINIMIZED_COMPONENT_SIZE: Vec2 = Vec2{x: 150.0, y: 125.0};
 const EXPANDED_COMPONENT_SIZE: Vec2 = Vec2{x: 400.0, y: 350.0};
+const DEFAULT_ICON_SIZE: Vec2 = Vec2{x: 32.0, y: 32.0};
 
 pub struct ComponentWindow {
     pub pos: Pos2,
@@ -82,21 +83,21 @@ impl ComponentWindow {
                 // let img_size = 16.0 * minimize_texture.size_vec2() / minimize_texture.size_vec2().y;
                 
                 // If run clicked
-                if ui.add(egui::ImageButton::new(
-                    self.minimize_image.texture_id(ctx),
-                    self.minimize_image.size_vec2()
-                )).clicked(){
-                    let input = &component.required_input;
-                    component.required_output = component.simulate(input);
-                }
+                // if ui.add(egui::ImageButton::new(
+                //     self.minimize_image.texture_id(ctx),
+                //     Vec2::new(64.0, 64.0)
+                // )).clicked(){
+                //     let input = &component.required_input;
+                //     component.required_output = component.simulate(input);
+                // }
 
                 // If expanded, add entry boxes
                 if self.expanded {
-
+                    
                     // Minimize button + click
                     if ui.add(egui::ImageButton::new(
                         self.minimize_image.texture_id(ctx),
-                        self.minimize_image.size_vec2()
+                        DEFAULT_ICON_SIZE
                     )).clicked(){
                         self.expanded = false;
                     }
@@ -108,7 +109,7 @@ impl ComponentWindow {
                     // Maximize button + click
                     if ui.add(egui::ImageButton::new(
                         self.maximize_image.texture_id(ctx),
-                        self.maximize_image.size_vec2()
+                        DEFAULT_ICON_SIZE
                     )).clicked(){
                         self.expanded = true;
                     }
