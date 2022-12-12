@@ -1,4 +1,4 @@
-// use crate::component_window::{window_ui, ComponentWindow};
+use crate::component_window::{window_ui, ComponentWindow};
 use crate::toggle_switch::toggle;
 use std::collections::HashMap;
 
@@ -39,6 +39,7 @@ impl eframe::App for WidgetTestApp {
         egui::CentralPanel::default().show(ctx, |ui| {
 
             ui.add(toggle(toggled));
+            window_ui(ui);
         });
     }
 }
