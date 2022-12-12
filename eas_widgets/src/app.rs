@@ -1,4 +1,6 @@
-use crate::component_window::{window_ui, ComponentWindow};
+use egui::Pos2;
+
+use crate::component_window::ComponentWindow;
 use crate::toggle_switch::toggle;
 use std::collections::HashMap;
 
@@ -8,14 +10,16 @@ const N_MAX_WINDOWS: i32 = 1000;
 // #[derive(serde::Deserialize, serde::Serialize)]
 // #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct WidgetTestApp {
-    toggled: bool
+    toggled: bool,
+    window: ComponentWindow,
 }
 
 impl Default for WidgetTestApp {
     fn default() -> Self {
 
         Self {
-            toggled: false
+            toggled: false,
+            window: ComponentWindow::new(Pos2{x:0.0, y:0.0})
         }
     }
 }
@@ -33,13 +37,14 @@ impl eframe::App for WidgetTestApp {
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let Self {
-            toggled
+            toggled,
+            window
         }: &mut WidgetTestApp = self;
 
         egui::CentralPanel::default().show(ctx, |ui| {
 
             ui.add(toggle(toggled));
-            window_ui(ui);
+            window.display(ctx, ui)
         });
     }
 }
