@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use egui::{Pos2, Vec2, Ui, Rect};
 use egui_extras::RetainedImage;
-
+use egui::Window;
 const MINIMIZED_COMPONENT_SIZE: Vec2 = Vec2{x: 150.0, y: 125.0};
 const EXPANDED_COMPONENT_SIZE: Vec2 = Vec2{x: 400.0, y: 350.0};
 const DEFAULT_ICON_SIZE: Vec2 = Vec2{x: 32.0, y: 32.0};
 const HIGHLIGHT_STROKE: egui::Stroke = egui::Stroke{width: 1.0, color: egui::Color32::LIGHT_BLUE};
 const DEFAULT_STROKE: egui::Stroke = egui::Stroke{width: 1.0, color: egui::Color32::DARK_GRAY};
+const BACKGROUND_COLOR: egui::Color32 = egui::Color32::from_rgb(27, 27, 27);
 
 pub struct ComponentWindow {
     pub pos: Pos2,
@@ -84,11 +85,9 @@ impl ComponentWindow {
         // Drag
         // let response = ui.allocate_response(ui.available_size(), egui::Sense::click_and_drag());
         if response.dragged() {
-            // self.pos = self.pos + response.drag_delta();
             self.rect = self.rect.translate(response.drag_delta());
-            // println!("{:?}", self.pos);
         }
-
+        
         // Move to location
         // let rect = rect;
 
@@ -111,9 +110,44 @@ impl ComponentWindow {
     
             // Inner rectangle
             ui.painter()
-                .rect(inner_rect, radius, egui::Color32::DARK_GRAY, egui::Stroke::default());
+                .rect(inner_rect, radius, BACKGROUND_COLOR, egui::Stroke::default());
             
-                
+            let arrow_size = Vec2{x:15.0, y:15.0};
+            let arrow_rect = Rect{
+                min:inner_rect.right_top() - Vec2{x:arrow_size.x, y:0.0},
+                max:inner_rect.right_top() - Vec2{x:0.0, y:arrow_size.y}
+            };
+            let arrow_origin = inner_rect.right_top() - arrow_size;
+            let (arrow_rect, mut response) = ui.allocate_rect(desired_size, egui::Sense::click());
+
+            // If expanded, add entry boxes
+            if self.expanded {
+
+                // Minimize button + click
+                if ui.add(egui::ImageButton::new(
+                    self.minimize_image.texture_id(ctx),
+                    DEFAULT_ICON_SIZE
+                )).clicked(){
+                    self.expanded = false;
+                }
+
+                // rows_from_hash(ui, &mut component.required_input);
+                // rows_from_hash(ui, &mut component.required_output);
+            } else {
+
+
+                ui.painter().arrow(arrow_origin, arrow_size, DEFAULT_STROKE);
+                // ui.painter().
+                // Maximize button + click
+                if ui.add(egui::ImageButton::new(
+                    self.maximize_image.texture_id(ctx),
+                    DEFAULT_ICON_SIZE
+                )).clicked(){
+                    self.expanded = true;
+                }
+            }
+
+            
         }
 
 
@@ -128,30 +162,6 @@ impl ComponentWindow {
         //     let input = &component.required_input;
         //     component.required_output = component.simulate(input);
         // }
-
-        // If expanded, add entry boxes
-        if self.expanded {
-            
-            // Minimize button + click
-            if ui.add(egui::ImageButton::new(
-                self.minimize_image.texture_id(ctx),
-                DEFAULT_ICON_SIZE
-            )).clicked(){
-                self.expanded = false;
-            }
-
-            // rows_from_hash(ui, &mut component.required_input);
-            // rows_from_hash(ui, &mut component.required_output);
-        } else {
-
-            // Maximize button + click
-            if ui.add(egui::ImageButton::new(
-                self.maximize_image.texture_id(ctx),
-                DEFAULT_ICON_SIZE
-            )).clicked(){
-                self.expanded = true;
-            }
-        }
 
         // Set hightlight rectangle
         let rect = ui.min_rect();
