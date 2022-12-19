@@ -32,16 +32,16 @@ mod tests{
             
         };
 
-        let mut tc = Toolchain{components: vec![c1, c2]};
-        let input = HashMap::from([
-            ("y".to_string(), Value::Float(3.0)),
-            ("a".to_string(), Value::Vectorf32(vec![5.0, 5.0])),
-        ]);
-        let answer = vec![
-            HashMap::from([("x".to_string(), Value::Float(9.0))]),
-            HashMap::from([("z".to_string(), Value::Float(19.0))])
-        ];
-        assert_eq!(tc.simulate(&input), answer);
+        // let mut tc = Toolchain{components: vec![c1, c2]};
+        // let input = HashMap::from([
+        //     ("y".to_string(), Value::Float(3.0)),
+        //     ("a".to_string(), Value::Vectorf32(vec![5.0, 5.0])),
+        // ]);
+        // let answer = vec![
+        //     HashMap::from([("x".to_string(), Value::Float(9.0))]),
+        //     HashMap::from([("z".to_string(), Value::Float(19.0))])
+        // ];
+        // assert_eq!(tc.simulate(&input), answer);
 
     }
 }

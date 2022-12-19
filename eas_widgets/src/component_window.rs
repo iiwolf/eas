@@ -2,12 +2,13 @@ use std::collections::HashMap;
 use egui::{Pos2, Vec2, Ui, Rect};
 use egui_extras::RetainedImage;
 use egui::Window;
-const MINIMIZED_COMPONENT_SIZE: Vec2 = Vec2{x: 150.0, y: 125.0};
+const MINIMIZED_COMPONENT_SIZE: Vec2 = Vec2{x: 150.0, y: 150.0};
 const EXPANDED_COMPONENT_SIZE: Vec2 = Vec2{x: 400.0, y: 350.0};
 const DEFAULT_ICON_SIZE: Vec2 = Vec2{x: 32.0, y: 32.0};
 const HIGHLIGHT_STROKE: egui::Stroke = egui::Stroke{width: 1.0, color: egui::Color32::LIGHT_BLUE};
 const DEFAULT_STROKE: egui::Stroke = egui::Stroke{width: 1.0, color: egui::Color32::DARK_GRAY};
 const BACKGROUND_COLOR: egui::Color32 = egui::Color32::from_rgb(27, 27, 27);
+const PADDING: f32 = 5.0;
 
 pub struct ComponentWindow {
     pub pos: Pos2,
@@ -15,6 +16,7 @@ pub struct ComponentWindow {
     pub size: Vec2,
     pub highlight_rec: Rect,
     pub expanded: bool,
+    pub execution_string: String,
     maximize_image: RetainedImage,
     minimize_image: RetainedImage,
     run_image: RetainedImage,
@@ -54,6 +56,7 @@ impl ComponentWindow {
                 min: Pos2{x:0.0, y:0.0}, 
                 max: Pos2{x:10.0, y:10.0} 
             },
+            execution_string: "None".to_string(),
             expanded: false,
             maximize_image: RetainedImage::from_image_bytes("maximize.png", include_bytes!("../../assets/maximize.png")).unwrap(),
             minimize_image: RetainedImage::from_image_bytes("maximize.png", include_bytes!("../../assets/minimize.png")).unwrap(),
@@ -70,109 +73,126 @@ impl ComponentWindow {
 
     // pub fn create_window(&mut self, ctx: &egui::Context, component: &mut Component) {
     
-    pub fn display(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) -> egui::Response {
+    pub fn display(&mut self, ctx: &egui::Context, ui: &mut egui::Ui) {
         // Widget code can be broken up in four steps:
         //  1. Decide a size for the widget
         //  2. Allocate space for it
         //  3. Handle interactions with the widget (if any)
         //  4. Paint the widget
-    
-        // 2. Allocating space:
-        // This is where we get a region of the screen assigned.
-        // We also tell the Ui to sense clicks in the allocated region.
-        let response = ui.allocate_rect(self.rect, egui::Sense::click_and_drag());
+        egui::Area::new("my_area")
+            .movable(true)
+            .default_pos(egui::pos2(32.0, 32.0))
+            .show(ctx, |ui| {
 
-        // Drag
-        // let response = ui.allocate_response(ui.available_size(), egui::Sense::click_and_drag());
-        if response.dragged() {
-            self.rect = self.rect.translate(response.drag_delta());
-        }
-        
-        // Move to location
-        // let rect = rect;
+                ui.set_width(self.size.x);
+                ui.set_height(self.size.y);
 
-        // 4. Paint!
-        // Make sure we need to paint:
-        if ui.is_rect_visible(self.rect) {
-    
-            // All coordinates are in absolute screen coordinates so we use `rect` to place the elements.
-            let radius = 5.0;
-            let border = Vec2{x:10.0, y:10.0};
-    
-            // Outer rectangle
-            ui.painter()
-                .rect(self.rect, radius, egui::Color32::default(), DEFAULT_STROKE);
+                
+                let title_bar_size = Vec2{x:self.size.x, y: self.size.y * 0.10};
+                let icon_size = Vec2{x:title_bar_size.y, y: title_bar_size.y};
+                ui.with_layout(egui::Layout::top_down(egui::Align::RIGHT), |ui| {
+                    ui.allocate_ui_with_layout(
+                            title_bar_size,
+                            egui::Layout::left_to_right(egui::Align::Min).with_main_justify(true), 
+                            // ui.horizontal(
+                            |ui| {
+
+                            // ui.set_width(0.10 * MINIMIZED_COMPONENT_SIZE.x);
+                            // ui.set_height(0.10 * MINIMIZED_COMPONENT_SIZE.y);
+                            ui.add_space(PADDING);
+                            ui.label("Component 1");
+                            // ui.add_space(
+                                // title_bar_size.x - icon_size.x - PADDING - 
+                            // )
+                            // If expanded, add entry boxes
+                            if self.expanded {
+
+                                // Minimize button + click
+                                if ui.add(egui::ImageButton::new(
+                                    self.minimize_image.texture_id(ctx),
+                                    icon_size
+                                )).clicked(){
+                                    self.expanded = false;
+                                    self.size = MINIMIZED_COMPONENT_SIZE;
+                                }
+
+                                // rows_from_hash(ui, &mut component.required_input);
+                                // rows_from_hash(ui, &mut component.required_output);
+                            } else {
+
+
+                                // Maximize button + click
+                                if ui.add(egui::ImageButton::new(
+                                    self.maximize_image.texture_id(ctx),
+                                    icon_size
+                                )).clicked(){
+                                    self.expanded = true;
+                                    self.size = EXPANDED_COMPONENT_SIZE;
+                                }
+                            }
+
+                        }
+                    // )
+                    );
+
+                        
+                    // If run clicked
+                    if ui.add(egui::ImageButton::new(
+                        self.run_image.texture_id(ctx),
+                        DEFAULT_ICON_SIZE
+                    )).clicked(){
+                        println!("Simulate!");
+                        // let input = &component.required_input;
+                        // component.required_output = component.simulate(input);
+                    }
+
+            });
+              
+
+                // 4. Paint!
+                // Make sure we need to paint:
+                if ui.is_rect_visible(self.rect) {
+
+                    // All coordinates are in absolute screen coordinates so we use `rect` to place the elements.
+                    let radius = 5.0;
+                    let border = Vec2{x:10.0, y:10.0};
+                    self.rect = ui.min_rect();
+                    
+                    // Outer rectangle
+                    ui.painter()
+                        .rect(self.rect, radius, egui::Color32::default(), DEFAULT_STROKE);
+                    
+                    let inner_rect = egui::Rect{
+                        min: self.rect.min + border,
+                        max: self.rect.max - border,
+                    };
             
-            let inner_rect = egui::Rect{
-                min: self.rect.min + border,
-                max: self.rect.max - border,
-            };
-    
-            // Inner rectangle
-            ui.painter()
-                .rect(inner_rect, radius, BACKGROUND_COLOR, egui::Stroke::default());
-            
-            let arrow_size = Vec2{x:15.0, y:15.0};
-            let arrow_rect = Rect{
-                min:inner_rect.right_top() - Vec2{x:arrow_size.x, y:0.0},
-                max:inner_rect.right_top() - Vec2{x:0.0, y:arrow_size.y}
-            };
-            let arrow_origin = inner_rect.right_top() - arrow_size;
-            let (arrow_rect, mut response) = ui.allocate_rect(desired_size, egui::Sense::click());
-
-            // If expanded, add entry boxes
-            if self.expanded {
-
-                // Minimize button + click
-                if ui.add(egui::ImageButton::new(
-                    self.minimize_image.texture_id(ctx),
-                    DEFAULT_ICON_SIZE
-                )).clicked(){
-                    self.expanded = false;
+                    // Inner rectangle
+                    // ui.painter()
+                    //     .rect(inner_rect, radius, BACKGROUND_COLOR, egui::Stroke::default());
+                    
                 }
+                
+                // Set hightlight rectangle
+                let rect = ui.min_rect();
+                let mut min = rect.right_top();
+                min.x -= 20.0;
+                let mut max = rect.right_bottom();
+                max.x += 20.0;
 
-                // rows_from_hash(ui, &mut component.required_input);
-                // rows_from_hash(ui, &mut component.required_output);
-            } else {
+                // ui.text_edit_singleline(&mut component.name.to_string());
+                self.highlight_rec = egui::Rect{min:min, max:max};
 
-
-                ui.painter().arrow(arrow_origin, arrow_size, DEFAULT_STROKE);
-                // ui.painter().
-                // Maximize button + click
-                if ui.add(egui::ImageButton::new(
-                    self.maximize_image.texture_id(ctx),
-                    DEFAULT_ICON_SIZE
-                )).clicked(){
-                    self.expanded = true;
-                }
-            }
-
+            });    
             
-        }
 
-
+        // let mut string = self.execution_string.clone();
+        // ui.add_sized(ui.available_size(), egui::TextEdit::multiline(&string));
         // Load exapnded button texture
         // let img_size = 16.0 * minimize_texture.size_vec2() / minimize_texture.size_vec2().y;
         
-        // If run clicked
-        // if ui.add(egui::ImageButton::new(
-        //     self.minimize_image.texture_id(ctx),
-        //     Vec2::new(64.0, 64.0)
-        // )).clicked(){
-        //     let input = &component.required_input;
-        //     component.required_output = component.simulate(input);
-        // }
 
-        // Set hightlight rectangle
-        let rect = ui.min_rect();
-        let mut min = rect.right_top();
-        min.x -= 20.0;
-        let mut max = rect.right_bottom();
-        max.x += 20.0;
 
-        // ui.text_edit_singleline(&mut component.name.to_string());
-        self.highlight_rec = egui::Rect{min:min, max:max};
-
-        response
+        // response
     }
 }
