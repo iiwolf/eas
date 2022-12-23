@@ -108,6 +108,7 @@ impl ComponentWindow {
             .show(ctx, |ui| {
                 ui.set_width(self.size.x);
                 ui.set_height(self.size.y);
+                
                 // ui.style_mut().spacing.button_padding = Vec2::new(0.0,0.0);
                 // ui.set_style(style)
                 self.rect = ui.min_rect();
@@ -144,27 +145,19 @@ impl ComponentWindow {
                 };
     
                 // ui.add_space(PADDING);
-                // ui.label("Component 1");
+                ui.label("Component 1");
                 let button_padding = ui.style().spacing.button_padding;
 
-                // Top left
-                ui.put(egui::Rect::from_min_size(self.rect.left_top(), icon_size),
-                    egui::ImageButton::new(
-                    self.minimize_image.texture_id(ctx),
-                    icon_size,
-                ));
-
                 // Top Rright
-                let widget_rect = egui::Rect::from_min_size(self.rect.right_top(), icon_size);
-                // let top_right = self.rect.right_top();
-                // let widget_rect = egui::Rect::from_min_size(
-                //     top_right - Vec2{
-                //         x: icon_size.x + button_padding.x, 
-                //         y: 0.0 - button_padding.y
-                //     }, 
-                //     icon_size
-                // );
-            
+                let top_right = self.rect.right_top();
+                let widget_rect = egui::Rect::from_min_size(
+                    top_right - Vec2{
+                        x: icon_size.x + button_padding.x, 
+                        y: 0.0 - button_padding.y
+                    }, 
+                    icon_size
+                );
+                
                 // If expanded, add entry boxes
                 if self.expanded {
                     // Minimize button + click
@@ -196,13 +189,12 @@ impl ComponentWindow {
                     }
                 }
 
-                // //Text edit
-                // ui.horizontal(|ui| {
-                //     ui.add_space(PADDING);
-                //     ui.add(egui::TextEdit::multiline(&mut self.execution_string));
-                //     ui.add_space(PADDING);
-
-                // });
+                //Text edit
+                ui.horizontal(|ui| {
+                    ui.add_space(PADDING);
+                    ui.add(egui::TextEdit::multiline(&mut self.execution_string));
+                    ui.add_space(PADDING);
+                });
 
                 let bottom_right = self.rect.right_bottom();
                 let run_rect = egui::Rect::from_min_size(
