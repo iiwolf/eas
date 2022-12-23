@@ -3,7 +3,7 @@ use egui_extras::RetainedImage;
 use std::collections::HashMap;
 const MINIMIZED_COMPONENT_SIZE: Vec2 = Vec2 { x: 100.0, y: 100.0 };
 const EXPANDED_COMPONENT_SIZE: Vec2 = Vec2 { x: 400.0, y: 400.0 };
-const MAX_ICON_SIZE: Vec2 = Vec2 { x: 16.0, y: 16.0 };
+const MAX_ICON_SIZE: Vec2 = Vec2 { x: 24.0, y: 24.0 };
 const HIGHLIGHT_STROKE: egui::Stroke = egui::Stroke {
     width: 1.0,
     color: egui::Color32::LIGHT_BLUE,
@@ -142,88 +142,28 @@ impl ComponentWindow {
                 // Title Bar
                 let title_bar_size = Vec2 {
                     x: self.size.x,
-                    y: self.size.y * 0.10,
+                    y: self.size.y * if self.expanded {0.10} else {0.20},
                 };
                 let icon_size = Vec2 {
-                    x: title_bar_size.y,
-                    y: title_bar_size.y,
+                    x: title_bar_size.y.min(MAX_ICON_SIZE.x),
+                    y: title_bar_size.y.min(MAX_ICON_SIZE.y),
                 };
     
                 let button_padding = ui.style().spacing.button_padding;
+
                 // ui.add_space(PADDING);
-                ui.horizontal(|ui| {
-                    ui.label("Component 1");
-    
-                    // Top Rright
-                    let top_right = self.rect.right_top();
-                    let widget_rect = egui::Rect::from_min_size(
-                        top_right - Vec2{
-                            x: icon_size.x + button_padding.x, 
-                            y: 0.0 - button_padding.y
-                        }, 
-                        icon_size
-                    );
-                    
-                    // If expanded, add entry boxes
-                    if self.expanded {
-                        // Minimize button + click
+                egui::TopBottomPanel::top("Component Title")
+                .frame(egui::Frame::none())
+                .show_inside(
+                    ui,|ui| {
+                        ui.with_layout(
+                            egui::Layout::left_to_right(egui::Align::Center),
+                    |ui| {
+                        
+                        // If run clicked
                         if ui
-                            .put(widget_rect,
-                                egui::ImageButton::new(
-                                self.minimize_image.texture_id(ctx),
-                                icon_size,
-                            ).frame(false))
-                            .clicked()
-                        {
-                            self.expanded = false;
-                            self.size = MINIMIZED_COMPONENT_SIZE;
-                        }
-    
-                        // rows_from_hash(ui, &mut component.required_input);
-                        // rows_from_hash(ui, &mut component.required_output);
-                    } else {
-                        // Maximize button + click
-                        if ui
-                            .put(widget_rect, egui::ImageButton::new(
-                                self.maximize_image.texture_id(ctx),
-                                icon_size,
-                            ).frame(false))
-                            .clicked()
-                        {
-                            self.expanded = true;
-                            self.size = EXPANDED_COMPONENT_SIZE;
-                        }
-                    }
-    
-                });
-
-                ui.horizontal_centered(|ui| {
-
-                    if self.expanded {
-                        //Text edit
-                        ui.add(egui::TextEdit::multiline(&mut self.execution_string));
-                    } else {
-                        let rect = buffer_rect(self.rect, 0.15 * self.size.x);
-                        ui.put(rect, egui::ImageButton::new(
-                            self.rust_logo.texture_id(ctx),
-                            rect.max - rect.min,
-                        ).frame(false));
-                    }
-
-                });
-
-                let bottom_right = self.rect.right_bottom();
-                let run_rect = egui::Rect::from_min_size(
-                    bottom_right - icon_size - button_padding - ui.style().spacing.item_spacing, 
-                    icon_size
-                );
-
-                // If run clicked
-                if self.expanded {
-                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), 
-                        |ui| {
-                            if ui.add(
-                                egui::ImageButton::new(
+                            .add(
+                            egui::ImageButton::new(
                                     self.run_image.texture_id(ctx),
                                     icon_size,
                                 ).frame(false)
@@ -234,10 +174,91 @@ impl ComponentWindow {
                             // let input = &component.required_input;
                             // component.required_output = component.simulate(input);
                         }
+
+                        // Manually size component label to take up space - icon_size
+                        let rect = ui.available_rect_before_wrap();
+                        let text_rect = egui::Rect::from_min_max(
+                            rect.min + Vec2::new(icon_size.x, 0.0),
+                            rect.max - Vec2::new(icon_size.x, 0.0)
+                        );
+
+                        let mut label = egui::RichText::new("Component 1");
+                        if self.expanded {
+                            label = label.heading().strong();
+                        } 
+                        // else {
+                            // label = label;
+                        // }
+                        ui.put(text_rect, egui::Label::new(label));
+                        
+                        // If expanded, add entry boxes
+                        if self.expanded {
+                            // Minimize button + click
+                            if ui
+                                // .put(widget_rect,
+                                .add(
+                                    egui::ImageButton::new(
+                                    self.minimize_image.texture_id(ctx),
+                                    icon_size,
+                                ).frame(false))
+                                .clicked()
+                            {
+                                self.expanded = false;
+                                self.size = MINIMIZED_COMPONENT_SIZE;
+                            }
         
+                            // rows_from_hash(ui, &mut component.required_input);
+                            // rows_from_hash(ui, &mut component.required_output);
+                        } else {
+                            // Maximize button + click
+                            if ui
+                                // .put(widget_rect, 
+                                .add(
+                                    egui::ImageButton::new(
+                                    self.maximize_image.texture_id(ctx),
+                                    icon_size,
+                                ).frame(false))
+                                .clicked()
+                            {
+                                self.expanded = true;
+                                self.size = EXPANDED_COMPONENT_SIZE;
+                            }
                         }
-                    );
-                }
+                    });
+                });
+                ui.separator();
+
+                egui::CentralPanel::default().show_inside(ui, |ui| {
+
+                    if self.expanded {
+
+                        // Code edit
+                        egui::ScrollArea::vertical().show(ui, |ui| {
+                            ui.add(
+                                egui::TextEdit::multiline(&mut self.execution_string)
+                                    .font(egui::TextStyle::Monospace) // for cursor height
+                                    .code_editor()
+                                    .desired_rows(23)
+                                    .lock_focus(true)
+                                    .desired_width(ui.available_width())
+                            );
+                        });
+
+                    } else {
+
+                        // Else just logo
+                        let rect = buffer_rect(self.rect, 0.15 * self.size.x);
+                        ui
+                        // .put(rect, 
+                            .add(                            egui::ImageButton::new(
+                            self.rust_logo.texture_id(ctx),
+                            // rect.max - rect.min,
+                            ui.available_size()
+                        ).frame(false));
+                    }
+
+                });
+
                 // Set hightlight rectangle
                 let rect = ui.min_rect();
                 let mut min = rect.right_top();
