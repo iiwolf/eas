@@ -29,6 +29,7 @@ pub struct ComponentWindow {
     maximize_image: RetainedImage,
     minimize_image: RetainedImage,
     run_image: RetainedImage,
+    rust_logo: RetainedImage,
 }
 
 // fn rows_from_hash(ui: &mut Ui, variables: &mut HashMap<String, Value>) {
@@ -51,6 +52,15 @@ pub struct ComponentWindow {
 //         }
 //     }
 // }
+
+pub fn buffer_rect(rect: egui::Rect, margin: f32) -> egui::Rect {
+    let border = Vec2 { x: margin, y: margin };
+    egui::Rect {
+        min: rect.min + border,
+        max: rect.max - border,
+    }
+}
+
 impl ComponentWindow {
     // pub fn name(&self) -> String { self.component.name.clone() }
 
@@ -70,19 +80,25 @@ impl ComponentWindow {
             expanded: true,
             maximize_image: RetainedImage::from_image_bytes(
                 "maximize.png",
-                include_bytes!("../../assets/maximize.png"),
+                include_bytes!("../../assets/top_right_purple.png"),
             )
             .unwrap(),
             minimize_image: RetainedImage::from_image_bytes(
-                "maximize.png",
-                include_bytes!("../../assets/minimize.png"),
+                "minimize.png",
+                include_bytes!("../../assets/bottom_left_purple.png"),
             )
             .unwrap(),
             run_image: RetainedImage::from_image_bytes(
-                "maximize.png",
+                "triangle.png",
                 include_bytes!("../../assets/triangle.png"),
             )
             .unwrap(),
+            rust_logo: RetainedImage::from_image_bytes(
+                "rust_logo.svg",
+                include_bytes!("../../assets/rust_logo.svg"),
+            )
+            .unwrap(),
+
         }
     }
 
@@ -102,9 +118,19 @@ impl ComponentWindow {
         //  2. Allocate space for it
         //  3. Handle interactions with the widget (if any)
         //  4. Paint the widget
-        egui::Area::new("my_area")
-            .movable(true)
+        let frame = egui::Frame::none()
+            .fill(BACKGROUND_COLOR)
+            // .outer_margin(10.0)
+            .inner_margin(10.0)
+            .stroke(MAJOR_GRID_STROKE)
+            .rounding(10.0);
+            
+        egui::Window::new("my_area")
             .default_pos(egui::pos2(0.0, 0.0))
+            .title_bar(false)
+            .resizable(false)
+            .collapsible(false)
+            .frame(frame)
             .show(ctx, |ui| {
                 ui.set_width(self.size.x);
                 ui.set_height(self.size.y);
@@ -113,27 +139,6 @@ impl ComponentWindow {
                 // ui.set_style(style)
                 self.rect = ui.min_rect();
                 
-                // 4. Paint!
-                // Make sure we need to paint:
-                if ui.is_rect_visible(self.rect) {
-                    // All coordinates are in absolute screen coordinates so we use `rect` to place the elements.
-                    let radius = 5.0;
-                    let border = Vec2 { x: 10.0, y: 10.0 };
-
-                    // Outer rectangle
-                    ui.painter()
-                        .rect(self.rect, radius, egui::Color32::default(), DEFAULT_STROKE);
-
-                    let inner_rect = egui::Rect {
-                        min: self.rect.min + border,
-                        max: self.rect.max - border,
-                    };
-
-                    // Inner rectangle
-                    // ui.painter()
-                    //     .rect(inner_rect, radius, BACKGROUND_COLOR, egui::Stroke::default());
-                }
-
                 // Title Bar
                 let title_bar_size = Vec2 {
                     x: self.size.x,
@@ -144,56 +149,67 @@ impl ComponentWindow {
                     y: title_bar_size.y,
                 };
     
-                // ui.add_space(PADDING);
-                ui.label("Component 1");
                 let button_padding = ui.style().spacing.button_padding;
-
-                // Top Rright
-                let top_right = self.rect.right_top();
-                let widget_rect = egui::Rect::from_min_size(
-                    top_right - Vec2{
-                        x: icon_size.x + button_padding.x, 
-                        y: 0.0 - button_padding.y
-                    }, 
-                    icon_size
-                );
-                
-                // If expanded, add entry boxes
-                if self.expanded {
-                    // Minimize button + click
-                    if ui
-                        .put(widget_rect,
-                            egui::ImageButton::new(
-                            self.minimize_image.texture_id(ctx),
-                            icon_size,
-                        ))
-                        .clicked()
-                    {
-                        self.expanded = false;
-                        self.size = MINIMIZED_COMPONENT_SIZE;
-                    }
-
-                    // rows_from_hash(ui, &mut component.required_input);
-                    // rows_from_hash(ui, &mut component.required_output);
-                } else {
-                    // Maximize button + click
-                    if ui
-                        .put(widget_rect, egui::ImageButton::new(
-                            self.maximize_image.texture_id(ctx),
-                            icon_size,
-                        ))
-                        .clicked()
-                    {
-                        self.expanded = true;
-                        self.size = EXPANDED_COMPONENT_SIZE;
-                    }
-                }
-
-                //Text edit
+                // ui.add_space(PADDING);
                 ui.horizontal(|ui| {
-                    ui.add_space(PADDING);
-                    ui.add(egui::TextEdit::multiline(&mut self.execution_string));
-                    ui.add_space(PADDING);
+                    ui.label("Component 1");
+    
+                    // Top Rright
+                    let top_right = self.rect.right_top();
+                    let widget_rect = egui::Rect::from_min_size(
+                        top_right - Vec2{
+                            x: icon_size.x + button_padding.x, 
+                            y: 0.0 - button_padding.y
+                        }, 
+                        icon_size
+                    );
+                    
+                    // If expanded, add entry boxes
+                    if self.expanded {
+                        // Minimize button + click
+                        if ui
+                            .put(widget_rect,
+                                egui::ImageButton::new(
+                                self.minimize_image.texture_id(ctx),
+                                icon_size,
+                            ).frame(false))
+                            .clicked()
+                        {
+                            self.expanded = false;
+                            self.size = MINIMIZED_COMPONENT_SIZE;
+                        }
+    
+                        // rows_from_hash(ui, &mut component.required_input);
+                        // rows_from_hash(ui, &mut component.required_output);
+                    } else {
+                        // Maximize button + click
+                        if ui
+                            .put(widget_rect, egui::ImageButton::new(
+                                self.maximize_image.texture_id(ctx),
+                                icon_size,
+                            ).frame(false))
+                            .clicked()
+                        {
+                            self.expanded = true;
+                            self.size = EXPANDED_COMPONENT_SIZE;
+                        }
+                    }
+    
+                });
+
+                ui.horizontal_centered(|ui| {
+
+                    if self.expanded {
+                        //Text edit
+                        ui.add(egui::TextEdit::multiline(&mut self.execution_string));
+                    } else {
+                        let rect = buffer_rect(self.rect, 0.15 * self.size.x);
+                        ui.put(rect, egui::ImageButton::new(
+                            self.rust_logo.texture_id(ctx),
+                            rect.max - rect.min,
+                        ).frame(false));
+                    }
+
                 });
 
                 let bottom_right = self.rect.right_bottom();
@@ -203,19 +219,25 @@ impl ComponentWindow {
                 );
 
                 // If run clicked
-                if ui.put(run_rect,
-                        egui::ImageButton::new(
-                            self.run_image.texture_id(ctx),
-                            icon_size,
-                        )
-                    )
-                    .clicked()
-                {
-                    println!("Simulate!");
-                    // let input = &component.required_input;
-                    // component.required_output = component.simulate(input);
+                if self.expanded {
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), 
+                        |ui| {
+                            if ui.add(
+                                egui::ImageButton::new(
+                                    self.run_image.texture_id(ctx),
+                                    icon_size,
+                                ).frame(false)
+                            )
+                            .clicked()
+                        {
+                            println!("Simulate!");
+                            // let input = &component.required_input;
+                            // component.required_output = component.simulate(input);
+                        }
+        
+                        }
+                    );
                 }
-
                 // Set hightlight rectangle
                 let rect = ui.min_rect();
                 let mut min = rect.right_top();
