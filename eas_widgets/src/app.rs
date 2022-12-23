@@ -43,7 +43,7 @@ impl eframe::App for WidgetTestApp {
 
         egui::CentralPanel::default().show(ctx, |ui| {
 
-            ui.add(toggle(toggled));
+            // ui.add(toggle(toggled));
             window.display(ctx, ui)
         });
     }
