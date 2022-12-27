@@ -134,6 +134,7 @@ impl ComponentWindow {
             .show(ctx, |ui| {
                 ui.set_width(self.size.x);
                 ui.set_height(self.size.y);
+                println!("Available in window: {:?}", ui.available_height());
                 
                 // ui.style_mut().spacing.button_padding = Vec2::new(0.0,0.0);
                 // ui.set_style(style)
@@ -142,13 +143,13 @@ impl ComponentWindow {
                 // Title Bar
                 let title_bar_size = Vec2 {
                     x: self.size.x,
-                    y: self.size.y * if self.expanded {0.10} else {0.20},
+                    y: self.size.y * if self.expanded {0.20} else {0.10},
                 };
                 let icon_size = Vec2 {
                     x: title_bar_size.y.min(MAX_ICON_SIZE.x),
                     y: title_bar_size.y.min(MAX_ICON_SIZE.y),
                 };
-    
+                
                 let button_padding = ui.style().spacing.button_padding;
 
                 // ui.add_space(PADDING);
@@ -174,6 +175,7 @@ impl ComponentWindow {
                             // let input = &component.required_input;
                             // component.required_output = component.simulate(input);
                         }
+                        println!("Available in TopPanel: {:?}", ui.available_height());
 
                         // Manually size component label to take up space - icon_size
                         let rect = ui.available_rect_before_wrap();
@@ -185,11 +187,12 @@ impl ComponentWindow {
                         let mut label = egui::RichText::new("Component 1");
                         if self.expanded {
                             label = label.heading().strong();
-                        } 
-                        // else {
-                            // label = label;
-                        // }
+                        } else {
+                            label = label.small();
+                        }
+
                         ui.put(text_rect, egui::Label::new(label));
+                        println!("Available after Label: {:?}", ui.available_height());
                         
                         // If expanded, add entry boxes
                         if self.expanded {
@@ -229,6 +232,7 @@ impl ComponentWindow {
                 ui.separator();
 
                 egui::CentralPanel::default().show_inside(ui, |ui| {
+                    println!("Available in CentralPanel: {:?}", ui.available_height());
 
                     if self.expanded {
 
@@ -248,12 +252,18 @@ impl ComponentWindow {
 
                         // Else just logo
                         let rect = buffer_rect(self.rect, 0.15 * self.size.x);
+                        println!("Available in Logo: {:?}", ui.available_height());
+
+                        // Compute square from remanining available size
+                        let size = Vec2::new(ui.available_height(), ui.available_height());
+
                         ui
-                        // .put(rect, 
-                            .add(                            egui::ImageButton::new(
-                            self.rust_logo.texture_id(ctx),
-                            // rect.max - rect.min,
-                            ui.available_size()
+                            .add_sized(size,
+                            // .put(rect,
+                            // .add(
+                            egui::ImageButton::new(
+                                self.rust_logo.texture_id(ctx),
+                                size
                         ).frame(false));
                     }
 
