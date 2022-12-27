@@ -252,19 +252,16 @@ impl ComponentWindow {
 
                         // Else just logo
                         let rect = buffer_rect(self.rect, 0.15 * self.size.x);
-                        println!("Available in Logo: {:?}", ui.available_height());
 
                         // Compute square from remanining available size
                         let size = Vec2::new(ui.available_height(), ui.available_height());
 
-                        ui
-                            .add_sized(size,
-                            // .put(rect,
-                            // .add(
-                            egui::ImageButton::new(
-                                self.rust_logo.texture_id(ctx),
-                                size
-                        ).frame(false));
+                        let rust_logo = egui::ImageButton::new(self.rust_logo.texture_id(ctx),size).frame(false);
+                        ui.horizontal_centered( |ui| {
+                            ui.add_sized(size, rust_logo);
+
+                        });
+
                     }
 
                 });
