@@ -170,12 +170,17 @@ impl eframe::App for TemplateApp {
                                ).collect()
                             )
                         );
+                        println!("{:?}", names);
                         let mut default_name = "Empty".to_string();
                         for counter in 1..N_MAX_WINDOWS{
                             if !names.contains(&default_name){ break; }
                             default_name = format!("Empty_{}", counter);
                         }
+
+                        // Create new component in toolchain
                         toolchains.push(Toolchain::new(vec![Component::new(default_name)]));
+
+                        // Reference in component window? 
                         component_windows.push(ComponentWindow::new(central_panel_ui.min_rect().left_top()));
                     }
                 }
@@ -200,7 +205,7 @@ impl eframe::App for TemplateApp {
 
                     // Force component to be in bounds
                     component_window.pos = component_window.pos.max(ui.min_rect().left_top());
-                    component_window.create_window(ctx, component);
+                    component_window.display(ctx, ui, component);
                      
                     // Adding arrow
                     let edge_response = ui.allocate_rect(component_window.highlight_rec,  egui::Sense::click());

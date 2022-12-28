@@ -465,26 +465,12 @@ name = "eas"
 version = "0.1.0"
 dependencies = [
  "console_error_panic_hook",
- "eas_widgets",
  "eframe",
  "egui",
  "egui_extras",
  "evalexpr",
  "image",
  "rand",
- "tracing-subscriber",
- "tracing-wasm",
-]
-
-[[package]]
-name = "eas_widgets"
-version = "0.1.0"
-dependencies = [
- "console_error_panic_hook",
- "eframe",
- "egui",
- "egui_extras",
- "image",
  "tracing-subscriber",
  "tracing-wasm",
 ]

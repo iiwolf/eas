@@ -15,7 +15,7 @@ egui = "0.19.0"
 egui_extras = { version = "0.19.0", features = ["image"] }
 image = { version = "0.24", features = ["png"] }
 eframe = { version = "0.19.0"}
-eas_widgets = { path = "eas_widgets" }
+# eas_widgets = { path = "eas_widgets" }
 
 # You only need serde if you want app persistence:
 # serde = { version = "1", features = ["derive"] }
