@@ -23,8 +23,8 @@ impl From<evalexpr::Value> for Value {
 pub struct Component{
     pub name: String,
     pub eval_expression: String,
-    pub required_input: HashMap<String, Value>,
-    pub required_output: HashMap<String, Value>,
+    pub input: HashMap<String, Value>,
+    pub output: HashMap<String, Value>,
 }
 
 impl Default for Component {
@@ -32,8 +32,8 @@ impl Default for Component {
         Self {
             name: "Empty".to_string(),
             eval_expression: String::new(),
-            required_input: HashMap::new(),
-            required_output: HashMap::new(),
+            input: HashMap::new(),
+            output: HashMap::new(),
         }
     }
 }
@@ -44,13 +44,20 @@ impl Component{
         Self {
             name: name,
             eval_expression: String::new(),
-            required_input: HashMap::new(),
-            required_output: HashMap::new(),
+            input: HashMap::new(),
+            output: HashMap::new(),
         }
     }
 
-    pub fn simulate(&self, input: &HashMap<String, Value>) -> HashMap<String, Value> {
+    // Idiomatic getters for input/outputs
+    // pub fn last_input(&self) -> HashMap<String, Value> { self.input }
+    // pub fn last_output(&self) -> HashMap<String, Value> { self.output }
+
+    pub fn simulate(&mut self, input: &HashMap<String, Value>) -> HashMap<String, Value> {
         
+        // Save as most recent input
+        self.input = input.clone();
+
         // Create mutable clone
         let mut eval_string = self.eval_expression.clone();
         
@@ -58,7 +65,7 @@ impl Component{
         println!("Evaluating expression:    {:?}", eval_string);
 
         // Process RHS, replacing each input variable with value
-        for (variable, value) in &self.required_input {
+        for (variable, value) in &self.input {
 
             if input.contains_key(variable) {
                 eval_string = match value {
@@ -98,7 +105,7 @@ impl Component{
             // Assign variables from calculation
             for (variable, value) in context.iter_variables() {
                 
-                if self.required_output.contains_key(&variable) {
+                if self.output.contains_key(&variable) {
                     // Convert evalexpr::Value to eas::Value
                     output_hash.insert(variable, Value::from(value));
                 } else {
@@ -111,6 +118,9 @@ impl Component{
             println!("Failed to run properly!\n\t{:?}", result.unwrap_err());
         }
 
+        // Save as most recent output
+        self.output = output_hash.clone();
+        
         // Return output has either way
         output_hash
     }

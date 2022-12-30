@@ -1,7 +1,7 @@
 use egui::{Pos2, Rect, Ui, Vec2, Stroke};
 use egui_extras::RetainedImage;
 use std::collections::HashMap;
-use crate::component::Component;
+use crate::component::{Component, Value};
 
 // Style constants
 const MINIMIZED_COMPONENT_SIZE: Vec2 = Vec2 { x: 100.0, y: 100.0 };
@@ -29,7 +29,8 @@ pub struct ComponentWindow {
     // pub execution_string: String,
 
     // State tracking
-    pub pos: Pos2,
+    pos: Pos2,
+    default_pos: Pos2,
     rect: Rect,
     size: Vec2,
     pub highlight_rec: Rect,
@@ -40,28 +41,33 @@ pub struct ComponentWindow {
     minimize_image: RetainedImage,
     run_image: RetainedImage,
     rust_logo: RetainedImage,
+
+    // Input/output
+    pub input: HashMap<String, Value>,
+    pub output: HashMap<String, Value>,
+
 }
 
-// fn rows_from_hash(ui: &mut Ui, variables: &mut HashMap<String, Value>) {
-//     for (name, value) in variables {
+fn rows_from_hash(ui: &mut Ui, variables: &mut HashMap<String, Value>) {
+    for (name, value) in variables {
 
-//         match value {
-//             Value::Float(val) => {
-//                 ui.label(name.to_string());
-//                 ui.add(egui::DragValue::new(val).speed(1.0));
-//                 ui.end_row();
-//             },
-//             Value::Vectorf32(values) => {
-//                 ui.label(name.to_string());
-//                 for val in values{
-//                     ui.add(egui::DragValue::new(val).speed(1.0));
-//                     ui.end_row();
-//                 }
+        match value {
+            Value::Float(val) => {
+                ui.label(name.to_string());
+                ui.add(egui::DragValue::new(val).speed(1.0));
+                ui.end_row();
+            },
+            Value::Vectorf32(values) => {
+                ui.label(name.to_string());
+                for val in values{
+                    ui.add(egui::DragValue::new(val).speed(1.0));
+                    ui.end_row();
+                }
 
-//             }
-//         }
-//     }
-// }
+            }
+        }
+    }
+}
 
 pub fn buffer_rect(rect: egui::Rect, margin: f32) -> egui::Rect {
     let border = Vec2 { x: margin, y: margin };
@@ -73,10 +79,11 @@ pub fn buffer_rect(rect: egui::Rect, margin: f32) -> egui::Rect {
 
 impl ComponentWindow {
     // pub fn name(&self) -> String { self.component.name.clone() }
-
     pub fn new(pos: Pos2) -> Self {
         ComponentWindow {
-            // component: component,
+
+            // Position, size, etc.
+            default_pos: pos,
             pos: pos,
             rect: Rect {
                 min: pos,
@@ -88,6 +95,8 @@ impl ComponentWindow {
                 max: Pos2 { x: 10.0, y: 10.0 },
             },
             expanded: true,
+
+            // Buttons
             maximize_image: RetainedImage::from_image_bytes(
                 "maximize.png",
                 include_bytes!("../assets/top_right_purple.png"),
@@ -109,6 +118,10 @@ impl ComponentWindow {
             )
             .unwrap(),
 
+            // Data
+            input: HashMap::new(),
+            output: HashMap::new(),
+
         }
     }
 
@@ -123,8 +136,6 @@ impl ComponentWindow {
 
     pub fn display(&mut self, ctx: &egui::Context, ui: &mut egui::Ui, component: &mut Component) {
 
-        // draw_grid(ui, MAJOR_GRID_STROKE);
-
         let frame = egui::Frame::none()
             .fill(BACKGROUND_COLOR)
             // .outer_margin(10.0)
@@ -133,7 +144,7 @@ impl ComponentWindow {
             .rounding(10.0);
 
         egui::Window::new(&component.name)
-            .default_pos(egui::pos2(0.0, 0.0))
+            .default_pos(self.default_pos)
             .title_bar(false)
             .resizable(false)
             .collapsible(false)
@@ -144,7 +155,7 @@ impl ComponentWindow {
                 ui.set_width(self.size.x);
                 ui.set_height(self.size.y);
                 self.rect = ui.min_rect();
-                
+
                 // Title Bar
                 let title_bar_size = Vec2 {
                     x: self.size.x,
@@ -175,8 +186,7 @@ impl ComponentWindow {
                                 .clicked()
                             {
                                 println!("Simulate!");
-                                let input = &component.required_input;
-                                component.required_output = component.simulate(input);
+                                self.output = component.simulate(&self.input);
                             }
 
                             // Manually size component label to take up space - icon_size
@@ -211,8 +221,6 @@ impl ComponentWindow {
                                     self.size = MINIMIZED_COMPONENT_SIZE;
                                 }
             
-                                // rows_from_hash(ui, &mut component.required_input);
-                                // rows_from_hash(ui, &mut component.required_output);
                             } else {
                                 // Maximize button + click
                                 if ui
@@ -232,7 +240,32 @@ impl ComponentWindow {
                     });
 
                 ui.separator();
+                
+                if self.expanded {
+                    let side_panel_size = self.size.x * 0.25;
 
+                    // Input side panel
+                    egui::SidePanel::left("Inputs")
+                        .frame(egui::Frame::default())
+                        .resizable(true)
+                        .default_width(side_panel_size)
+                        .show_inside(ui, |ui| {
+                            ui.label("Inputs");
+                            rows_from_hash(ui, &mut self.input);
+                        });
+
+                    // Output side panel
+                    egui::SidePanel::right("Outputs")
+                        .frame(egui::Frame::default())
+                        .resizable(true)
+                        .default_width(side_panel_size)
+                        .show_inside(ui, |ui| {
+                            ui.label("Outputs");
+                            rows_from_hash(ui, &mut self.output);
+                        });
+                }
+
+                // Core app 
                 egui::CentralPanel::default().show_inside(ui, |ui| {
 
                     if self.expanded {
@@ -245,7 +278,7 @@ impl ComponentWindow {
                                     .code_editor()
                                     .desired_rows(23)
                                     .lock_focus(true)
-                                    .desired_width(ui.available_width())
+                                    .desired_width(self.size.x * 0.5)
                             );
                         });
 
@@ -264,6 +297,8 @@ impl ComponentWindow {
 
                 });
 
+                self.pos = ui.min_rect().left_top();
+
                 // Set hightlight rectangle
                 let rect = ui.min_rect();
                 let mut min = rect.right_top();
@@ -274,12 +309,13 @@ impl ComponentWindow {
                 // ui.text_edit_singleline(&mut component.name.to_string());
                 self.highlight_rec = egui::Rect { min: min, max: max };
             });
-
+        
+        // self.pos = window.unwrap().inner.unwrap().
         // let mut string = self.execution_string.clone();
         // ui.add_sized(ui.available_size(), egui::TextEdit::multiline(&string));
         // Load exapnded button texture
         // let img_size = 16.0 * minimize_texture.size_vec2() / minimize_texture.size_vec2().y;
-
+            
         // response
     }
 }

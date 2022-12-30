@@ -12,11 +12,11 @@ impl Toolchain {
         Toolchain { components: components, is_active: false }
     }
 
-    pub fn simulate(&self, input_data: &HashMap<String, Value>) -> Vec<HashMap<String, Value>>{
+    pub fn simulate(&mut self, input_data: &HashMap<String, Value>) -> Vec<HashMap<String, Value>>{
 
         let mut results: Vec<HashMap<String, Value>> = Vec::new();
         let mut running_data_map = input_data.clone();
-        for component in &self.components {
+        for component in self.components.iter_mut() {
             
             // Simulate and append to results
             let result = component.simulate(&running_data_map);

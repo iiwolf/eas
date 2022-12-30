@@ -1,4 +1,5 @@
 use egui::{Vec2, Pos2};
+use egui_extras::RetainedImage;
 use crate::grid::draw_grid;
 use crate::component_window::ComponentWindow;
 use crate::connection::{Connection, CONNECTION_STROKE};
@@ -17,8 +18,7 @@ pub struct TemplateApp {
     component_windows: Vec<ComponentWindow>,
     active_connection: Connection,
     line_state: f32,
-    green_arrow_texture: Option<egui::TextureHandle>
-
+    run_image: RetainedImage,
 }
 
 impl Default for TemplateApp {
@@ -27,12 +27,12 @@ impl Default for TemplateApp {
         // TC1 
         let tc1: Toolchain = Toolchain::new(vec![
             Component{
-                name: "square".to_string(),
+                name: "Component 1".to_string(),
                 eval_expression: String::from("x = y ^ 2"), 
-                required_input: HashMap::from([
+                input: HashMap::from([
                     ("y".to_string(), Value::Float(3.0))
                 ]),
-                required_output: HashMap::from([
+                output: HashMap::from([
                     ("x".to_string(), Value::Float(0.0)),
                 ])
         }]);
@@ -40,13 +40,13 @@ impl Default for TemplateApp {
         // TC2
         let tc2: Toolchain = Toolchain::new(vec![
             Component{
-                name: "addition".to_string(),
+                name: "Component 2".to_string(),
                 eval_expression: String::from("z = x + 100.0 / (a0 + a1)"), 
-                required_input: HashMap::from([
+                input: HashMap::from([
                     ("x".to_string(), Value::Float(9.0)),
                     ("a".to_string(), Value::Vectorf32(vec![5.0, 5.0])),
                 ]),
-                required_output: HashMap::from([
+                output: HashMap::from([
                     ("z".to_string(), Value::Float(0.0)),
                 ])
         }]);
@@ -59,14 +59,25 @@ impl Default for TemplateApp {
         //  Also this should be runable without the GUI at all. Through Rhai, Rust, Python, or 
         //  otherwise... So I guess just nail down the processes first?
         // let mut tc = Toolchain{components: vec![c1, c2]};
-        let cw1 = ComponentWindow::new(Pos2{x: 200.0, y:100.0});
-        let cw2 = ComponentWindow::new(Pos2{x: 400.0, y:100.0});
+        let mut cw1 = ComponentWindow::new(Pos2{x: 200.0, y:100.0});
+        cw1.input = tc1.components[0].input.clone();
+        cw1.output = tc1.components[0].output.clone();
+
+        let mut cw2 = ComponentWindow::new(Pos2{x: 400.0, y:100.0});
+        cw2.input = tc2.components[0].input.clone();
+        cw2.output = tc2.components[0].output.clone();
+
         Self {
             toolchains: vec![tc1, tc2],
             component_windows: vec![cw1, cw2],
             active_connection: Connection::default(),
             line_state: 0.0,
-            green_arrow_texture: None,
+            run_image: RetainedImage::from_image_bytes(
+                "triangle.png",
+                include_bytes!("../assets/triangle.png"),
+            )
+            .unwrap(),
+
         }
     }
 }
@@ -92,7 +103,7 @@ impl eframe::App for TemplateApp {
             component_windows, 
             active_connection,
             line_state, 
-            green_arrow_texture,
+            run_image,
         }: &mut TemplateApp = self;
         
         #[cfg(not(target_arch = "wasm32"))] // no File->Quit on web pages!
@@ -134,29 +145,34 @@ impl eframe::App for TemplateApp {
             // Grid
             draw_grid(ui, egui::Stroke{width: 1.0, color: egui::Color32::from_gray(60)}, line_state);
             
-            // For nested components to dplace themselves correctly
-            let central_panel_ui = &ui;
             
             // Buttons
             let text = egui::RichText::new("Add Component").font(egui::FontId::proportional(40.0));
             
-            let green_arrow_texture: &egui::TextureHandle = green_arrow_texture.get_or_insert_with(|| {
-                    // Load the texture only once.
-                    ui.ctx().load_texture(
-                        "my-image",
-                        egui::ColorImage::example(),
-                        Default::default()
-                    )
-                });
-
-            // Run *selected* toolchain -> need to be able to enter parameters first!
-            // if ui.button("Run").clicked() {
-            //     if toolchains.len() > 0 {
-            //         toolchains[0].simulate();
-            //     }
-            // }
+            let icon_size = ui.available_size() * 0.1;
+            let results = if ui.add(
+                egui::ImageButton::new(
+                    run_image.texture_id(ctx),
+                    icon_size,
+                ).frame(false)
+            ).clicked()
+            {
+                if toolchains.len() > 0 {
+                    let r  = toolchains[0].simulate(&component_windows[0].input);
+                    println!("Results!\n{:?}", r);
+                    Some(r)
+                } else {
+                    None
+                }
+            } else {
+                None
+            };
 
             ctx.request_repaint();
+            
+            // For nested components to dplace themselves correctly
+            let central_panel_ui = &ui;
+            
             egui::Area::new("add_button_area")
                 .anchor(egui::Align2::RIGHT_BOTTOM, Vec2{x:-100.0, y:-100.0})
                 .show(ctx, |ui| {
@@ -170,7 +186,7 @@ impl eframe::App for TemplateApp {
                                ).collect()
                             )
                         );
-                        println!("{:?}", names);
+
                         let mut default_name = "Empty".to_string();
                         for counter in 1..N_MAX_WINDOWS{
                             if !names.contains(&default_name){ break; }
@@ -178,10 +194,15 @@ impl eframe::App for TemplateApp {
                         }
 
                         // Create new component in toolchain
-                        toolchains.push(Toolchain::new(vec![Component::new(default_name)]));
+                        let comp = Component::new(default_name);
 
                         // Reference in component window? 
-                        component_windows.push(ComponentWindow::new(central_panel_ui.min_rect().left_top()));
+                        let mut cw = ComponentWindow::new(central_panel_ui.min_rect().left_top());
+                        cw.input = comp.input.clone();
+                        cw.output = comp.output.clone();
+
+                        toolchains.push(Toolchain::new(vec![comp]));
+                        component_windows.push(cw);
                     }
                 }
             );
@@ -204,7 +225,7 @@ impl eframe::App for TemplateApp {
                     let component_window = &mut component_windows[window_index];
 
                     // Force component to be in bounds
-                    component_window.pos = component_window.pos.max(ui.min_rect().left_top());
+                    // component_window.pos = component_window.pos.max(ui.min_rect().left_top());
                     component_window.display(ctx, ui, component);
                      
                     // Adding arrow
