@@ -158,9 +158,12 @@ impl eframe::App for TemplateApp {
             ).clicked()
             {
                 if toolchains.len() > 0 {
-                    let r  = toolchains[0].simulate(&component_windows[0].input);
-                    println!("Results!\n{:?}", r);
-                    Some(r)
+                    let outputs  = toolchains[0].simulate(&component_windows[0].input);
+                    println!("Results!\n{:?}", outputs);
+                    for (i, output) in outputs.iter().enumerate() {
+                        component_windows[i].output = output.clone();
+                    }
+                    Some(outputs)
                 } else {
                     None
                 }

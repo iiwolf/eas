@@ -1,5 +1,5 @@
 use crate::component::{Component, Value};
-use std::{collections::HashMap};
+use std::{collections::HashMap, ops::Deref};
 
 pub struct Toolchain {
     pub components: Vec<Component>,
@@ -18,8 +18,20 @@ impl Toolchain {
         let mut running_data_map = input_data.clone();
         for component in self.components.iter_mut() {
             
+            if !results.is_empty() {
+                let last_results = results.last().unwrap().clone();
+                for key in component.input.keys() {
+                    if last_results.contains_key(key) {
+                        component.input[key] = last_results[key].clone();
+                    }
+                }
+                // Current input consists of running data + input
+                running_data_map = component.input.clone();
+                // running_data_map.extend();
+            }
+
             // Simulate and append to results
-            let result = component.simulate(&running_data_map);
+            let result: HashMap<String, Value> = component.simulate(&running_data_map);
             
             // Update running data with output
             running_data_map.extend(result.clone());
