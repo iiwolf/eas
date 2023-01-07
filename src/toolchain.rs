@@ -19,10 +19,17 @@ impl Toolchain {
         for component in self.components.iter_mut() {
             
             if !results.is_empty() {
-                let last_results = results.last().unwrap().clone();
-                for key in component.input.keys() {
-                    if last_results.contains_key(key) {
-                        component.input[key] = last_results[key].clone();
+                
+                // Next input is combination of what's defined in component and what
+                // other components have produced
+                // let next_input = component.input.clone();
+                
+                // Take last results, and assign
+                // let last_results = results.last().unwrap().clone();
+                // for key in next_input.keys() {
+                for key in results.last().unwrap().keys() {
+                    if component.input.contains_key(key) {
+                        *component.input.get_mut(key).unwrap() = results.last().unwrap()[key].clone(); //last_results[key].clone();
                     }
                 }
                 // Current input consists of running data + input

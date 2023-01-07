@@ -162,6 +162,7 @@ impl eframe::App for TemplateApp {
                     println!("Results!\n{:?}", outputs);
                     for (i, output) in outputs.iter().enumerate() {
                         component_windows[i].output = output.clone();
+                        component_windows[i].input = toolchains[0].components[i].input.clone();
                     }
                     Some(outputs)
                 } else {
