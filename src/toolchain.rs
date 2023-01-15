@@ -2,13 +2,13 @@ use crate::component::{Component, Value};
 use std::{collections::HashMap, ops::Deref};
 
 pub struct Toolchain {
-    pub components: Vec<Component>,
+    pub components: Vec<Box<dyn Component>>,
     pub is_active: bool,
 }
 
 impl Toolchain {
     
-    pub fn new(components: Vec<Component>) -> Self {
+    pub fn new(components: Vec<Box<dyn Component>>) -> Self {
         Toolchain { components: components, is_active: false }
     }
 
@@ -17,7 +17,7 @@ impl Toolchain {
         let mut results: Vec<HashMap<String, Value>> = Vec::new();
         let mut running_data_map = input_data.clone();
         for component in self.components.iter_mut() {
-            
+
             if !results.is_empty() {
                 
                 // Next input is combination of what's defined in component and what
@@ -28,23 +28,29 @@ impl Toolchain {
                 // let last_results = results.last().unwrap().clone();
                 // for key in next_input.keys() {
                 for key in results.last().unwrap().keys() {
-                    if component.input.contains_key(key) {
-                        *component.input.get_mut(key).unwrap() = results.last().unwrap()[key].clone(); //last_results[key].clone();
+                    if component.contains_input(key) {
+                        component.set_input(key, results.last().unwrap()[key].clone());
+                        // *component.input.get_mut(key).unwrap() = results.last().unwrap()[key].clone(); //last_results[key].clone();
                     }
                 }
                 // Current input consists of running data + input
-                running_data_map = component.input.clone();
+                running_data_map = component.get_input_clone();
                 // running_data_map.extend();
             }
 
             // Simulate and append to results
-            let result: HashMap<String, Value> = component.simulate(&running_data_map);
+            let result = component.simulate(&running_data_map);
             
-            // Update running data with output
-            running_data_map.extend(result.clone());
+            // Technically result could have just a filesystem effect and no output - not sure
+            // if I want this to be a secondary component yet
+            if result.is_some() {
 
-            // Push into vec
-            results.push(result);
+                // Update running data with output
+                running_data_map.extend(result.unwrap().clone());
+
+                // Push into vec
+                results.push(result.unwrap());
+            }
 
         }
         results

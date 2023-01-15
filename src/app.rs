@@ -3,7 +3,8 @@ use egui_extras::RetainedImage;
 use crate::grid::draw_grid;
 use crate::component_window::ComponentWindow;
 use crate::connection::{Connection, CONNECTION_STROKE};
-use crate::component::{Component, Value};
+use crate::component::Value;
+use crate::eval_expr_component::EvalExprComponent;
 use crate::toolchain::Toolchain;
 use std::collections::HashMap;
 
@@ -23,10 +24,10 @@ pub struct TemplateApp {
 
 impl Default for TemplateApp {
     fn default() -> Self {
-
+        
         // TC1 
         let tc1: Toolchain = Toolchain::new(vec![
-            Component{
+            Box::new(EvalExprComponent {
                 name: "Component 1".to_string(),
                 eval_expression: String::from("x = y ^ 2"), 
                 input: HashMap::from([
@@ -35,11 +36,11 @@ impl Default for TemplateApp {
                 output: HashMap::from([
                     ("x".to_string(), Value::Float(0.0)),
                 ])
-        }]);
+        })]);
         
         // TC2
         let tc2: Toolchain = Toolchain::new(vec![
-            Component{
+            Box::new(EvalExprComponent{
                 name: "Component 2".to_string(),
                 eval_expression: String::from("z = x + 100.0 / (a0 + a1)"), 
                 input: HashMap::from([
@@ -49,7 +50,7 @@ impl Default for TemplateApp {
                 output: HashMap::from([
                     ("z".to_string(), Value::Float(0.0)),
                 ])
-        }]);
+        })]);
         
         // Trying to decide how I want the toolchain-component-component-window relationship 
         //  to work... ultimately I know it's best to separate business and UI logic.
@@ -60,12 +61,12 @@ impl Default for TemplateApp {
         //  otherwise... So I guess just nail down the processes first?
         // let mut tc = Toolchain{components: vec![c1, c2]};
         let mut cw1 = ComponentWindow::new(Pos2{x: 200.0, y:100.0});
-        cw1.input = tc1.components[0].input.clone();
-        cw1.output = tc1.components[0].output.clone();
+        cw1.input = tc1.components[0].get_input_clone();
+        cw1.output = tc1.components[0].get_output_clone();
 
         let mut cw2 = ComponentWindow::new(Pos2{x: 400.0, y:100.0});
-        cw2.input = tc2.components[0].input.clone();
-        cw2.output = tc2.components[0].output.clone();
+        cw2.input = tc2.components[0].get_input_clone();
+        cw2.output = tc2.components[0].get_output_clone();
 
         Self {
             toolchains: vec![tc1, tc2],
@@ -186,7 +187,7 @@ impl eframe::App for TemplateApp {
                         let names = Vec::from_iter(
                             toolchains.iter().map(
                                 |tc| tc.components.iter().map(
-                                    |c| c.name.to_string()
+                                    |c| c.get_name().to_string()
                                ).collect()
                             )
                         );
@@ -198,6 +199,8 @@ impl eframe::App for TemplateApp {
                         }
 
                         // Create new component in toolchain
+                        // Ok here we get to the issue of specifying what the type of component is being used
+                        //  when instantiating a new object.
                         let comp = Component::new(default_name);
 
                         // Reference in component window? 
