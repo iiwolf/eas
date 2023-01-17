@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use evalexpr::*;
+use cpython::{Python, PyDict, PyFloat};
 use crate::component::{Value, Component};
 
 // #[derive(serde::Deserialize, serde::Serialize, Debug)]
@@ -59,27 +60,27 @@ impl Component for PythonComponent {
         println!("Evaluating expression:    {:?}", eval_string);
 
         // Process RHS, replacing each input variable with value
-        for (variable, value) in &self.input {
+        // for (variable, value) in &self.input {
 
-            if input.contains_key(variable) {
-                eval_string = match value {
-                    Value::Float(val) => eval_string.replace(variable, &format!("{:?}", val)),
-                    Value::Vectorf32(vec32) => {
-                        for (i, value) in vec32.iter().enumerate() {
-                            eval_string = eval_string.replace(
-                                &format!("{}{:?}", variable, i), 
-                                &format!("{:?}", value)
-                            );
-                        }
-                        eval_string
-                    }
-                }
-            } else {
-                println!("Invalid input: missing input {:?}", variable);
-                return None
-            }
+        //     if input.contains_key(variable) {
+        //         eval_string = match value {
+        //             Value::Float(val) => eval_string.replace(variable, &format!("{:?}", val)),
+        //             Value::Vectorf32(vec32) => {
+        //                 for (i, value) in vec32.iter().enumerate() {
+        //                     eval_string = eval_string.replace(
+        //                         &format!("{}{:?}", variable, i), 
+        //                         &format!("{:?}", value)
+        //                     );
+        //                 }
+        //                 eval_string
+        //             }
+        //         }
+        //     } else {
+        //         println!("Invalid input: missing input {:?}", variable);
+        //         return None
+        //     }
             
-        }
+        // }
 
         // Debug
         println!("                          {:?}", eval_string);
@@ -87,29 +88,63 @@ impl Component for PythonComponent {
         // Create HashMapContext to get multiple assignments
         let mut context = HashMapContext::new();
         
-        // Run code
-        let result = eval_with_context_mut(&eval_string, &mut context);
+        // Open Python instance
+        let gil = Python::acquire_gil();
+        let py = gil.python();
+        let locals = PyDict::new(py);
+        
+        for (variable, value) in &self.input {
+            match value {
+                Value::Float(val) => locals.set_item(py, variable, val),
+                Value::Vectorf32(vec32) => locals.set_item(py, variable, vec32)
+            };
+        }
 
+        // Run code
+        // let result = py.eval(&self.eval_expression, None, Some(&locals))?.extract(py)?;
+        let output = py.eval("os.getenv('USER') or os.getenv('USERNAME')", None, Some(&locals)); //.unwrap().extract(py).unwrap();
+
+        // let result = match output.is_ok() {
+        //     True => output.unwrap().extract(py),
+        //     False => {
+        //         println!("Failed to run properly!\n\t{:?}", output.unwrap_err());
+        //         return None;
+        //     },
+        // };
+
+        if output.is_err() {
+            println!("Failed to run properly!\n\t{:?}", output.unwrap_err());
+            return None;
+        }
+
+        let result = output.unwrap().extract(py);
+        
         // Create new hashmap to store variables
-        let mut output_hash = HashMap::new();
+        let mut output_hash: HashMap<String, Value> = HashMap::new();
         
         // evalexpr ran properly
         if result.is_ok() {
+            
+            // For now, assume output is always dict
+            let output_dict: PyDict = result.unwrap();
 
             // Assign variables from calculation
-            for (variable, value) in context.iter_variables() {
-                
-                if self.output.contains_key(&variable) {
-                    // Convert evalexpr::Value to eas::Value
-                    output_hash.insert(variable, Value::from(value));
+            for (variable, value) in output_dict.items(py) {
+
+                if self.output.contains_key(&variable.to_string()) {
+                    let float: f32 = value.cast_into::<PyFloat>(py).unwrap().value(py) as f32;
+                    output_hash.insert(variable.to_string(), Value::Float(float));
+
                 } else {
                     println!("Warning: unused output variable {:?}", variable);
                 }
+                
             }
 
         // evalexpr failed
         }else{
-            println!("Failed to run properly!\n\t{:?}", result.unwrap_err());
+            // println!("Failed to run properly!\n\t{:?}", result.unwrap_err());
+            println!("Failed to run properly and I don't know how to output the python errors so rip");
         }
 
         // Save as most recent output
