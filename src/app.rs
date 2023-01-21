@@ -1,10 +1,10 @@
 use egui::{Vec2, Pos2};
 use egui_extras::RetainedImage;
+use crate::eval_expr_component::EvalExprProcess;
 use crate::grid::draw_grid;
 use crate::component_window::ComponentWindow;
 use crate::connection::{Connection, CONNECTION_STROKE};
-use crate::component::Value;
-use crate::eval_expr_component::EvalExprComponent;
+use crate::component::{Component, Value};
 use crate::toolchain::Toolchain;
 use std::collections::HashMap;
 
@@ -27,22 +27,22 @@ impl Default for TemplateApp {
         
         // TC1 
         let tc1: Toolchain = Toolchain::new(vec![
-            Box::new(EvalExprComponent {
+            Component {
                 name: "Component 1".to_string(),
-                eval_expression: String::from("x = y ^ 2"), 
+                execution_process: Box::new(EvalExprProcess{eval_expression:"x = y ^ 2".to_string()}), 
                 input: HashMap::from([
                     ("y".to_string(), Value::Float(3.0))
                 ]),
                 output: HashMap::from([
                     ("x".to_string(), Value::Float(0.0)),
                 ])
-        })]);
+        }]);
         
         // TC2
         let tc2: Toolchain = Toolchain::new(vec![
-            Box::new(EvalExprComponent{
+            Component{
                 name: "Component 2".to_string(),
-                eval_expression: String::from("z = x + 100.0 / (a0 + a1)"), 
+                execution_process: Box::new(EvalExprProcess{eval_expression:"z = x + 100.0 / (a0 + a1)".to_string()}), 
                 input: HashMap::from([
                     ("x".to_string(), Value::Float(9.0)),
                     ("a".to_string(), Value::Vectorf32(vec![5.0, 5.0])),
@@ -50,7 +50,7 @@ impl Default for TemplateApp {
                 output: HashMap::from([
                     ("z".to_string(), Value::Float(0.0)),
                 ])
-        })]);
+        }]);
         
         // Trying to decide how I want the toolchain-component-component-window relationship 
         //  to work... ultimately I know it's best to separate business and UI logic.
@@ -61,12 +61,12 @@ impl Default for TemplateApp {
         //  otherwise... So I guess just nail down the processes first?
         // let mut tc = Toolchain{components: vec![c1, c2]};
         let mut cw1 = ComponentWindow::new(Pos2{x: 200.0, y:100.0});
-        cw1.input = tc1.components[0].get_input_clone();
-        cw1.output = tc1.components[0].get_output_clone();
+        cw1.input = tc1.components[0].input.clone();
+        cw1.output = tc1.components[0].output.clone();
 
         let mut cw2 = ComponentWindow::new(Pos2{x: 400.0, y:100.0});
-        cw2.input = tc2.components[0].get_input_clone();
-        cw2.output = tc2.components[0].get_output_clone();
+        cw2.input = tc2.components[0].input.clone();
+        cw2.output = tc2.components[0].output.clone();
 
         Self {
             toolchains: vec![tc1, tc2],
@@ -187,7 +187,7 @@ impl eframe::App for TemplateApp {
                         let names = Vec::from_iter(
                             toolchains.iter().map(
                                 |tc| tc.components.iter().map(
-                                    |c| c.get_name().to_string()
+                                    |c| c.name.to_string()
                                ).collect()
                             )
                         );
@@ -201,7 +201,7 @@ impl eframe::App for TemplateApp {
                         // Create new component in toolchain
                         // Ok here we get to the issue of specifying what the type of component is being used
                         //  when instantiating a new object.
-                        let comp = Component::new(default_name);
+                        let comp = Component::new(default_name, Box::new(EvalExprProcess::default()));
 
                         // Reference in component window? 
                         let mut cw = ComponentWindow::new(central_panel_ui.min_rect().left_top());

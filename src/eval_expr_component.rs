@@ -1,59 +1,37 @@
 use std::collections::HashMap;
 use evalexpr::*;
 use crate::component::{Value, Component};
+use crate::execution_process::ExecutionProcess;
 
 // #[derive(serde::Deserialize, serde::Serialize, Debug)]
 #[derive(Debug)]
-pub struct EvalExprComponent{
-    pub name: String,
+pub struct EvalExprProcess{
     pub eval_expression: String,
-    pub input: HashMap<String, Value>,
-    pub output: HashMap<String, Value>,
 }
 
-impl Default for EvalExprComponent {
+impl Default for EvalExprProcess {
     fn default() -> Self {
         Self {
-            name: "EvalExprComponent".to_string(),
             eval_expression: String::new(),
-            input: HashMap::new(),
-            output: HashMap::new(),
         }
     }
 }
 
 
 
-impl EvalExprComponent {
+impl EvalExprProcess {
 
-    fn new(name: String) -> Self {
+    pub fn new(eval_expression: String) -> Self {
         Self {
-            name: name,
-            eval_expression: String::new(),
-            input: HashMap::new(),
-            output: HashMap::new(),
+            eval_expression: eval_expression,
         }
     }
 }
 
-impl Component for EvalExprComponent {
-
-    fn get_name(&self) -> &String { &self.name }
-    fn get_mut_eval_expression(&mut self) -> String { self.eval_expression }
-    fn get_input(&self) -> &HashMap<String, Value>{ &self.input }
-    fn get_output(&self) -> &HashMap<String, Value>{ &self.output }
-    fn set_input(&mut self, key: &String, value: Value) {
-        *self.input.get_mut(key).unwrap() = value;
-    }    
-
-    fn get_input_clone(&self) -> HashMap<String, Value>{ self.input.clone() }
-    fn get_output_clone(&self) -> HashMap<String, Value>{ self.output.clone() }
+impl ExecutionProcess for EvalExprProcess {
 
     fn simulate(&mut self, input: &HashMap<String, Value>) -> Option<HashMap<String, Value>> {
         
-        // Save as most recent input
-        self.input = input.clone();
-
         // Create mutable clone
         let mut eval_string = self.eval_expression.clone();
         
@@ -61,7 +39,7 @@ impl Component for EvalExprComponent {
         println!("Evaluating expression:    {:?}", eval_string);
 
         // Process RHS, replacing each input variable with value
-        for (variable, value) in &self.input {
+        for (variable, value) in input {
 
             if input.contains_key(variable) {
                 eval_string = match value {
@@ -101,22 +79,21 @@ impl Component for EvalExprComponent {
             // Assign variables from calculation
             for (variable, value) in context.iter_variables() {
                 
-                if self.output.contains_key(&variable) {
-                    // Convert evalexpr::Value to eas::Value
-                    output_hash.insert(variable, Value::from(value));
-                } else {
-                    println!("Warning: unused output variable {:?}", variable);
-                }
+                output_hash.insert(variable, Value::from(value));
+
+                // if self.output.contains_key(&variable) {
+                //     // Convert evalexpr::Value to eas::Value
+                //     output_hash.insert(variable, Value::from(value));
+                // } else {
+                //     println!("Warning: unused output variable {:?}", variable);
+                // }
             }
 
         // evalexpr failed
         }else{
             println!("Failed to run properly!\n\t{:?}", result.unwrap_err());
         }
-
-        // Save as most recent output
-        self.output = output_hash.clone();
-        
+       
         // Return output has either way
         Some(output_hash)
     }

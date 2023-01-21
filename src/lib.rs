@@ -7,4 +7,5 @@ pub mod eval_expr_component;
 pub mod component_window;
 pub mod connection;
 pub mod toolchain;
+pub mod execution_process;
 pub use app::TemplateApp;

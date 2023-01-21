@@ -1,58 +1,35 @@
 use std::collections::HashMap;
 use evalexpr::*;
 use cpython::{Python, PyDict, PyFloat};
-use crate::component::{Value, Component};
+use crate::{component::Value, execution_process::ExecutionProcess};
 
 // #[derive(serde::Deserialize, serde::Serialize, Debug)]
 #[derive(Debug)]
-pub struct PythonComponent {
-    pub name: String,
+pub struct PythonProcess {
     pub eval_expression: String,
-    pub input: HashMap<String, Value>,
-    pub output: HashMap<String, Value>,
 }
 
-impl Default for PythonComponent {
+impl Default for PythonProcess {
     fn default() -> Self {
         Self {
-            name: "PythonComponent".to_string(),
             eval_expression: String::new(),
-            input: HashMap::new(),
-            output: HashMap::new(),
         }
     }
 }
 
-impl PythonComponent {
+impl PythonProcess {
 
-    fn new(name: String) -> Self {
+    fn new(eval_expression: String) -> Self {
         Self {
-            name: name,
-            eval_expression: String::new(),
-            input: HashMap::new(),
-            output: HashMap::new(),
+            eval_expression: eval_expression,
         }
     }
 }
 
-impl Component for PythonComponent {
+impl ExecutionProcess for PythonProcess {
     
-    fn get_name(&self) -> &String { &self.name }
-    fn get_mut_eval_expression(&mut self) -> String { self.eval_expression }
-    fn get_input(&self) -> &HashMap<String, Value>{ &self.input }
-    fn get_output(&self) -> &HashMap<String, Value>{ &self.output }
-    fn set_input(&mut self, key: &String, value: Value) {
-        *self.input.get_mut(key).unwrap() = value;
-    }    
-
-    fn get_input_clone(&self) -> HashMap<String, Value>{ self.input.clone() }
-    fn get_output_clone(&self) -> HashMap<String, Value>{ self.output.clone() }
-
     fn simulate(&mut self, input: &HashMap<String, Value>) -> Option<HashMap<String, Value>> {
         
-        // Save as most recent input
-        self.input = input.clone();
-
         // Create mutable clone
         let mut eval_string = self.eval_expression.clone();
         
@@ -93,7 +70,7 @@ impl Component for PythonComponent {
         let py = gil.python();
         let locals = PyDict::new(py);
         
-        for (variable, value) in &self.input {
+        for (variable, value) in input {
             match value {
                 Value::Float(val) => locals.set_item(py, variable, val),
                 Value::Vectorf32(vec32) => locals.set_item(py, variable, vec32)
@@ -131,13 +108,13 @@ impl Component for PythonComponent {
             // Assign variables from calculation
             for (variable, value) in output_dict.items(py) {
 
-                if self.output.contains_key(&variable.to_string()) {
+                // if self.output.contains_key(&variable.to_string()) {
                     let float: f32 = value.cast_into::<PyFloat>(py).unwrap().value(py) as f32;
                     output_hash.insert(variable.to_string(), Value::Float(float));
 
-                } else {
-                    println!("Warning: unused output variable {:?}", variable);
-                }
+                // } else {
+                //     println!("Warning: unused output variable {:?}", variable);
+                // }
                 
             }
 
@@ -148,7 +125,7 @@ impl Component for PythonComponent {
         }
 
         // Save as most recent output
-        self.output = output_hash.clone();
+        // self.output = output_hash.clone();
         
         // Return output has either way
         Some(output_hash)

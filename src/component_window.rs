@@ -134,7 +134,7 @@ impl ComponentWindow {
 
     // pub fn create_window(&mut self, ctx: &egui::Context, component: &mut Component) {
 
-    pub fn display<T: Component>(&mut self, ctx: &egui::Context, ui: &mut egui::Ui, component: &mut T) {
+    pub fn display(&mut self, ctx: &egui::Context, ui: &mut egui::Ui, component: &mut Component) {
 
         let frame = egui::Frame::none()
             .fill(BACKGROUND_COLOR)
@@ -143,7 +143,7 @@ impl ComponentWindow {
             .stroke(MAJOR_GRID_STROKE)
             .rounding(10.0);
 
-        egui::Window::new(component.get_name())
+        egui::Window::new(&component.name)
             .default_pos(self.default_pos)
             .title_bar(false)
             .resizable(false)
@@ -196,7 +196,7 @@ impl ComponentWindow {
                                 rect.max - Vec2::new(icon_size.x, 0.0)
                             );
 
-                            let mut label = egui::RichText::new(component.get_name());
+                            let mut label = egui::RichText::new(&component.name);
                             if self.expanded {
                                 label = label.heading().strong();
                             } else {
@@ -272,14 +272,14 @@ impl ComponentWindow {
 
                         // Code edit
                         egui::ScrollArea::vertical().show(ui, |ui| {
-                            ui.add(
-                                egui::TextEdit::multiline(&mut component.get_mut_eval_expression())
-                                    .font(egui::TextStyle::Monospace) // for cursor height
-                                    .code_editor()
-                                    .desired_rows(23)
-                                    .lock_focus(true)
-                                    .desired_width(self.size.x * 0.5)
-                            );
+                            // ui.add(
+                            //     egui::TextEdit::multiline(&mut component.execution_process.)
+                            //         .font(egui::TextStyle::Monospace) // for cursor height
+                            //         .code_editor()
+                            //         .desired_rows(23)
+                            //         .lock_focus(true)
+                            //         .desired_width(self.size.x * 0.5)
+                            // );
                         });
 
                     } else {

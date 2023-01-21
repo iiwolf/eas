@@ -2,13 +2,13 @@ use crate::component::{Component, Value};
 use std::{collections::HashMap, ops::Deref};
 
 pub struct Toolchain {
-    pub components: Vec<Box<dyn Component>>,
+    pub components: Vec<Component>,
     pub is_active: bool,
 }
 
 impl Toolchain {
     
-    pub fn new(components: Vec<Box<dyn Component>>) -> Self {
+    pub fn new(components: Vec<Component>) -> Self {
         Toolchain { components: components, is_active: false }
     }
 
@@ -28,13 +28,13 @@ impl Toolchain {
                 // let last_results = results.last().unwrap().clone();
                 // for key in next_input.keys() {
                 for key in results.last().unwrap().keys() {
-                    if component.contains_input(key) {
-                        component.set_input(key, results.last().unwrap()[key].clone());
+                    if component.input.contains_key(key) {
+                        *component.input.get_mut(key).unwrap() = results.last().unwrap()[key].clone();
                         // *component.input.get_mut(key).unwrap() = results.last().unwrap()[key].clone(); //last_results[key].clone();
                     }
                 }
                 // Current input consists of running data + input
-                running_data_map = component.get_input_clone();
+                running_data_map = component.input.clone();
                 // running_data_map.extend();
             }
 
@@ -44,12 +44,13 @@ impl Toolchain {
             // Technically result could have just a filesystem effect and no output - not sure
             // if I want this to be a secondary component yet
             if result.is_some() {
-
+                
+                let result = result.unwrap();
                 // Update running data with output
-                running_data_map.extend(result.unwrap().clone());
+                running_data_map.extend(result.clone());
 
                 // Push into vec
-                results.push(result.unwrap());
+                results.push(result);
             }
 
         }
