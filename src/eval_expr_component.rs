@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use evalexpr::*;
-use crate::component::{Value, Component};
+use crate::component::Value;
 use crate::execution_process::ExecutionProcess;
 
 // #[derive(serde::Deserialize, serde::Serialize, Debug)]
