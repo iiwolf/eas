@@ -4,7 +4,7 @@ extern crate eas;
 mod tests{
     use std::{collections::HashMap};
 
-    use eas::eval_expr_component::EvalExprProcess;
+    use eas::eval_expr_process::EvalExprProcess;
 
 
     #[test]

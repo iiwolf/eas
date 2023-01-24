@@ -1,6 +1,6 @@
 use egui::{Vec2, Pos2};
 use egui_extras::RetainedImage;
-use crate::eval_expr_component::EvalExprProcess;
+use crate::eval_expr_process::EvalExprProcess;
 use crate::grid::draw_grid;
 use crate::component_window::ComponentWindow;
 use crate::connection::{Connection, CONNECTION_STROKE};

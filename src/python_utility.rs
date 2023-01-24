@@ -1,6 +1,6 @@
 use std::{collections::HashMap};
 use cpython::{Python, PyResult, PyDict, PyObject, ToPyObject, PyFloat, ObjectProtocol, PyErr};
-use eas::{python_component::PythonProcess, component::Value, execution_process::ExecutionProcess};
+use eas::{python_process::PythonProcess, component::Value, execution_process::ExecutionProcess};
 
 fn call_python(code: &str, variables: HashMap<String, Value>) -> HashMap<String, Value>{
     let gil = Python::acquire_gil();

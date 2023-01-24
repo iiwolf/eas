@@ -3,7 +3,7 @@ extern crate eas;
 #[cfg(test)]
 mod tests{
     use std::{collections::HashMap};
-    use eas::{python_component::PythonProcess, component::Value, execution_process::ExecutionProcess};
+    use eas::{python_process::PythonProcess, component::Value, execution_process::ExecutionProcess};
     
     #[test]
     fn test_simulate(){
