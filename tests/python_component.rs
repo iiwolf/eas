@@ -3,134 +3,12 @@ extern crate eas;
 #[cfg(test)]
 mod tests{
     use std::{collections::HashMap};
-    use cpython::{Python, PyResult, PyDict, PyObject, ToPyObject, PyFloat, ObjectProtocol};
+    use cpython::{Python, PyResult, PyDict, PyObject, ToPyObject, PyFloat, ObjectProtocol, PyErr};
     use eas::{python_component::PythonProcess, component::Value};
-
-    #[test]
-    fn test_python_call(){
-        use cpython::{PyDict, PyResult, Python};
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        let sys = py.import("sys").unwrap();
-        let version: String = sys.get(py, "version").unwrap().extract(py).unwrap();
-
-        let locals = PyDict::new(py);
-        locals.set_item(py, "os", py.import("os").unwrap()).unwrap();
-        let user: String = py
-            .eval(
-                "os.getenv('USER') or os.getenv('USERNAME')",
-                None,
-                Some(&locals),
-            ).unwrap()
-            .extract(py).unwrap();
-
-        println!("Hello {}, I'm Python {}", user, version);
-        // Ok(())
-    }
     
-    // fn call_python(code: String, variables: HashMap<String, Value>) {
-    //     use cpython::{PyDict, PyResult, Python};
-
-    //     // Setup python interpreter
-    //     let gil = Python::acquire_gil();
-    //     let py = gil.python();
-
-    //     // Assign HashMap to python dict
-    //     let locals = PyDict::new(py);
-
-    //     locals.set_item(py, 
-    //         "os", py.import("os").unwrap()
-    //     ).unwrap();
-
-    //     let user: String = py
-    //         .eval(
-    //             code.to_string(),
-    //             None,
-    //             Some(&locals),
-    //         ).unwrap()
-    //         .extract(py).unwrap();
-
-    // }
-
-    fn call_python_function_simple() -> PyResult<()> {
+    fn call_python(code: &str, variables: HashMap<String, Value>) -> HashMap<String, Value>{
         let gil = Python::acquire_gil();
         let py = gil.python();
-
-        // Define the function
-        py.eval("def my_function(x): return x + 1", None, None)?;
-
-        // Get the function object
-        let function = py.eval("my_function", None, None)?;
-        // function.call(py, args, kwargs)
-        // Call the function
-        let args = (1,);
-        let result = function.call(py, args, None)?;
-
-        // Print the result
-        println!("{:?}", result);
-        Ok(())
-    }
-
-    // fn extract_function_name(signature: &str) -> Option<&str> {
-    //     let re = Regex::new(r"^def\s+(\w+)\s*\(").unwrap();
-    //     re.captures(signature).and_then(|captures| captures.get(1)).map(|m| m.as_str())
-    // }
-
-    fn extract_function_name(signature: &str) -> Option<&str> {
-        let def_index = signature.find("def ")?;
-        let open_bracket_index = signature.find("(")?;
-        signature.get(def_index+4..open_bracket_index)
-    }
-    
-    fn call_python_function(code: String, input_variables: HashMap<String, Value>) -> PyResult<HashMap<String, Value>> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        // Assign input variables to python dict
-        let locals = PyDict::new(py);
-        for (key, value) in input_variables.iter() {
-            let key = key.to_py_object(py);
-            match value {
-                Value::Float(f) => locals.set_item(py, key, f.to_py_object(py)).unwrap(),
-                Value::Vectorf32(v) => locals.set_item(py, key, v.to_py_object(py)).unwrap(),
-            }
-        }
-
-        // Define function
-        py.eval(code.as_str(), None, None);
-            
-        // Get function as object
-        let function_name = extract_function_name(code.as_str()).unwrap();
-        let function = py.eval(function_name, None, None)?;
-        // let result = function.call(py, None, Some(&locals))?;
-        let result = function.call(py, (3,),  Some(&locals))?;
-
-        // Collect the output variables
-        let mut output_variables = HashMap::new();
-        for (key, result) in locals.items(py).iter() {
-            let key: String = key.extract(py)?;
-            match result.get_type(py).name(py).as_ref() {
-                "float" => output_variables.insert(key, Value::Float(result.extract(py).unwrap())),
-                "int" => todo!(),
-                "str" => todo!(),
-                "list" => output_variables.insert(key, Value::Vectorf32(result.extract(py).unwrap())),
-                "dict" => todo!(),
-                _ => todo!(),
-            };
-        }
-
-        Ok(output_variables)
-    }
-            
-    fn call_python(code: String, variables: HashMap<String, Value>) {
-        use cpython::{PyDict, PyResult, Python, PyObject, PyFloat, PyErr};
-
-        // Setup python interpreter
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        // Assign HashMap to python dict
         let locals = PyDict::new(py);
         for (key, value) in variables.iter() {
             match value {
@@ -139,31 +17,41 @@ mod tests{
             }
         }
         
-        // Execute code
-        let result: PyResult<PyObject> = py.eval(code.as_str(), None, Some(&locals));
-        let output = result.unwrap();
-        let extraction: Result<PyFloat, PyErr> = output.extract(py);
-        if extraction.is_ok(){
-            for (val)in extraction.iter(){
-                println!("{:?}", val.value(py));
-            }
+        py.run(code, None, Some(&locals)).unwrap();
+    
+        let mut output_variables = HashMap::new();
+        for (key, result) in locals.items(py).iter() {
+            let key: String = key.extract(py).unwrap();
+            match result.get_type(py).name(py).as_ref() {
+                "float" => output_variables.insert(key, Value::Float(result.extract(py).unwrap())),
+                "int" => todo!(),
+                "str" => todo!(),
+                "list" => output_variables.insert(key, Value::Vectorf32(result.extract(py).unwrap())),
+                "dict" => todo!(),
+                _ => {
+                    println!("Unsupported variable \"{}\" of type \"{}\"", key, result.get_type(py).name(py).as_ref());
+                    None
+                },
+            };
         }
+    
+        output_variables
+    
     }
-
+    
     #[test]
     fn test_simulate(){
 
-        let eval_expression = "def multiply_two(x):\n\treturn x * 2".to_string();
-        let pp = PythonProcess{eval_expression: 
-            "def multiply_two(x):
-                return x * 2".to_string()
-        };
-        let inputs = HashMap::from([
-            ("x".to_string(), Value::Float(2.0))
-        ]);
-        let result = call_python_function(eval_expression, inputs);
-        println!()
-        // assert_eq!(Has, result);
+        let eval_expression = r#"
+def multiply_two(x: float) -> float:
+    return x * 2
+
+if __name__ == "__main__":
+    y = multiply_two(x)
+"#;
+        let output_hash = call_python(eval_expression, HashMap::from([('x'.to_string(), Value::Float(2.0))]));
+        assert_eq!(Some(&Value::Float(2.0)), output_hash.get("x"));
+        assert_eq!(Some(&Value::Float(4.0)), output_hash.get("y"));
 
     }
     // #[test]
