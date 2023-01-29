@@ -30,6 +30,9 @@ impl EvalExprProcess {
 
 impl ExecutionProcess for EvalExprProcess {
 
+    fn get_eval_expression(&mut self) -> &String { &self.eval_expression }
+    fn set_eval_expression(&mut self, eval_expression: String) { self.eval_expression = eval_expression; }
+
     fn simulate(&mut self, input: &HashMap<String, Value>) -> Option<HashMap<String, Value>> {
         
         // Create mutable clone

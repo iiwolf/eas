@@ -1,7 +1,7 @@
-use egui::{Pos2, Rect, Ui, Vec2, Stroke};
+use egui::{Pos2, Rect, Ui, Vec2, Stroke, TextBuffer};
 use egui_extras::RetainedImage;
 use std::collections::HashMap;
-use crate::component::{Component, Value};
+use crate::{component::{Component, Value}, execution_process::{self, ExecutionProcess}};
 
 // Style constants
 const MINIMIZED_COMPONENT_SIZE: Vec2 = Vec2 { x: 100.0, y: 100.0 };
@@ -272,14 +272,8 @@ impl ComponentWindow {
 
                         // Code edit
                         egui::ScrollArea::vertical().show(ui, |ui| {
-                            // ui.add(
-                            //     egui::TextEdit::multiline(&mut component.execution_process.)
-                            //         .font(egui::TextStyle::Monospace) // for cursor height
-                            //         .code_editor()
-                            //         .desired_rows(23)
-                            //         .lock_focus(true)
-                            //         .desired_width(self.size.x * 0.5)
-                            // );
+                            // let mut ep = component.execution_process.as_mut();
+                            self.display_execution_process(ui, &mut component.execution_process);
                         });
 
                     } else {
@@ -317,6 +311,21 @@ impl ComponentWindow {
         // let img_size = 16.0 * minimize_texture.size_vec2() / minimize_texture.size_vec2().y;
             
         // response
+    }
+
+    fn display_execution_process(&mut self, ui: &mut Ui, execution_process: &mut Box<dyn ExecutionProcess>){
+        let mut execution_string = execution_process.get_eval_expression().to_owned();
+        let mut test_string: String = "tacos".to_string();
+        ui.add(
+            egui::TextEdit::multiline(&mut execution_string)
+                .font(egui::TextStyle::Monospace) // for cursor height
+                .code_editor()
+                .desired_rows(23)
+                .lock_focus(true)
+                .desired_width(self.size.x * 0.5)
+        );
+
+        execution_process.set_eval_expression(execution_string);
     }
 }
 
