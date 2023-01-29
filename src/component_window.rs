@@ -273,7 +273,10 @@ impl ComponentWindow {
                         // Code edit
                         egui::ScrollArea::vertical().show(ui, |ui| {
                             // let mut ep = component.execution_process.as_mut();
-                            self.display_execution_process(ui, &mut component.execution_process);
+                            // self.display_execution_process(ui, &mut component.execution_process);
+                            // ui.add(component.execution_process);
+                            // ui.add(*component.execution_process);
+                            component.execution_process.display_widget(ui);
                         });
 
                     } else {
@@ -315,7 +318,6 @@ impl ComponentWindow {
 
     fn display_execution_process(&mut self, ui: &mut Ui, execution_process: &mut Box<dyn ExecutionProcess>){
         let mut execution_string = execution_process.get_eval_expression().to_owned();
-        let mut test_string: String = "tacos".to_string();
         ui.add(
             egui::TextEdit::multiline(&mut execution_string)
                 .font(egui::TextStyle::Monospace) // for cursor height

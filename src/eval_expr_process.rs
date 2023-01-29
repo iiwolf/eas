@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use evalexpr::*;
 use crate::component::Value;
 use crate::execution_process::ExecutionProcess;
+use egui::{Ui, Widget, Response};
 
 // #[derive(serde::Deserialize, serde::Serialize, Debug)]
 #[derive(Debug)]
@@ -28,10 +29,21 @@ impl EvalExprProcess {
     }
 }
 
+
 impl ExecutionProcess for EvalExprProcess {
 
     fn get_eval_expression(&mut self) -> &String { &self.eval_expression }
     fn set_eval_expression(&mut self, eval_expression: String) { self.eval_expression = eval_expression; }
+    fn display_widget(&mut self, ui: &mut Ui) -> Response {
+        ui.add(
+            egui::TextEdit::multiline(&mut self.eval_expression)
+                .font(egui::TextStyle::Monospace) // for cursor height
+                .code_editor()
+                .desired_rows(23)
+                .lock_focus(true)
+                // .desired_width(self.size.x * 0.5)
+        )
+    }
 
     fn simulate(&mut self, input: &HashMap<String, Value>) -> Option<HashMap<String, Value>> {
         
