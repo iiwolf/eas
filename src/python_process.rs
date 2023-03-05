@@ -52,7 +52,7 @@ impl ExecutionProcess for PythonProcess {
         let py = gil.python();
         let locals = PyDict::new(py);
         
-        // Process RHS, replacing each input variable with value
+        // Add variables to local scope
         for (key, value) in input.iter() {
             match value {
                 Value::Float(f) => locals.set_item(py, key, f).unwrap(),
@@ -68,10 +68,15 @@ impl ExecutionProcess for PythonProcess {
             return None;
         }
 
-        // Create new hashmap to store variables
+        // Create new hashmap to store output variables
         let mut output_hash: HashMap<String, Value> = HashMap::new();
         for (key, result) in locals.items(py).iter() {
             let key: String = key.extract(py).unwrap();
+
+            // Inputs SHOULD NOT be added to output has despite being available locals
+            if input.contains_key(&key) { continue };
+            
+            // Insert to output hash based on types
             match result.get_type(py).name(py).as_ref() {
                 "float" => output_hash.insert(key, Value::Float(result.extract(py).unwrap())),
                 "int" => todo!(),

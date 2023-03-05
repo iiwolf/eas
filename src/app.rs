@@ -43,7 +43,7 @@ impl Default for TemplateApp {
         let tc2: Toolchain = Toolchain::new(vec![
             Component{
                 name: "Python Component".to_string(),
-                execution_process: Box::new(PythonProcess{eval_expression:"z = x + 100.0 / (a0 + a1)".to_string()}), 
+                execution_process: Box::new(PythonProcess{eval_expression:"z = x + 100.0 / (a[0] + a[1])".to_string()}), 
                 input: HashMap::from([
                     ("x".to_string(), Value::Float(9.0)),
                     ("a".to_string(), Value::Vectorf32(vec![5.0, 5.0])),

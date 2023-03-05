@@ -6,7 +6,7 @@ mod tests{
     use eas::{python_process::PythonProcess, component::Value, execution_process::ExecutionProcess};
     
     #[test]
-    fn test_simulate(){
+    fn test_simulate_main_and_function_expression(){
 
         let eval_expression = r#"
 def multiply_two(x: float) -> float:
@@ -18,11 +18,10 @@ if __name__ == "__main__":
         let mut process: PythonProcess = PythonProcess::new(eval_expression.to_string());
         let input = HashMap::from([('x'.to_string(), Value::Float(2.0))]);
         let output_hash = process.simulate(&input);
-        assert_eq!(Some(&Value::Float(2.0)), output_hash.as_ref().unwrap().get("x"));
         assert_eq!(Some(&Value::Float(4.0)), output_hash.as_ref().unwrap().get("y"));
 
     }
-}
+
     #[test]
     fn test_simulate_simple_expression(){
 
@@ -32,22 +31,22 @@ y = 2 * x
         let mut process = PythonProcess::new(eval_expression.to_string());
         let input = HashMap::from([('x'.to_string(), Value::Float(2.0))]);
         let output_hash = process.simulate(&input);
-        assert_eq!(Some(&Value::Float(2.0)), output_hash.as_ref().unwrap().get("x"));
         assert_eq!(Some(&Value::Float(4.0)), output_hash.as_ref().unwrap().get("y"));
 
     }
 
+    #[test]
+    fn test_simulate_array(){
 
-    //     let input = HashMap::from([("x".to_string(), Value::Float(3.0))]);
-    //     let answer = HashMap::from([("y".to_string(), Value::Float(9.0))]);
-    //     assert_eq!(c1.simulate(&input), answer);
-    //     // assert_eq!(
-    //     //     c2.simulate(&HashMap::from([
-    //     //         ("x".to_string(), Value::Float(9.0)),
-    //     //         ("y".to_string(), Value::Vectorf32(vec![5.0, 2.0])),
-    //     //     ])), 
-    //     //     HashMap::from([("y", 19.0)])
-    //     // );
+        let eval_expression = r#"
+y = 2 * x[0] + 2 * x[1]
+"#;
+        let mut process = PythonProcess::new(eval_expression.to_string());
+        let array_input = Value::Vectorf32(vec![5.0, 5.0]);
+        let input = HashMap::from([('x'.to_string(), array_input)]);
+        let output_hash = process.simulate(&input);
+        assert_eq!(Some(&Value::Float(20.0)), output_hash.as_ref().unwrap().get("y"));
 
-    // }
+    }
+
 }
