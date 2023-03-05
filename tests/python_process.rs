@@ -10,10 +10,24 @@ mod tests{
 
         let eval_expression = r#"
 def multiply_two(x: float) -> float:
-    return x * 2What are
+    return x * 2
 
 if __name__ == "__main__":
     y = multiply_two(x)
+"#;
+        let mut process: PythonProcess = PythonProcess::new(eval_expression.to_string());
+        let input = HashMap::from([('x'.to_string(), Value::Float(2.0))]);
+        let output_hash = process.simulate(&input);
+        assert_eq!(Some(&Value::Float(2.0)), output_hash.as_ref().unwrap().get("x"));
+        assert_eq!(Some(&Value::Float(4.0)), output_hash.as_ref().unwrap().get("y"));
+
+    }
+}
+    #[test]
+    fn test_simulate_simple_expression(){
+
+        let eval_expression = r#"
+y = 2 * x
 "#;
         let mut process = PythonProcess::new(eval_expression.to_string());
         let input = HashMap::from([('x'.to_string(), Value::Float(2.0))]);
@@ -23,19 +37,6 @@ if __name__ == "__main__":
 
     }
 
-    // #[test]
-    // fn test_simulate(){
-    //     use eas::component::{Component, Value};
-    //     let mut c1 = Component{
-    //         name: "square".to_string(),
-    //         eval_expression: String::from("y = x ^ 2"), 
-    //         required_input: HashMap::from([
-    //             ("x".to_string(), Value::Float(3.0))
-    //         ]),
-    //         required_output: HashMap::from([
-    //             ("y".to_string(), Value::Float(0.0)),
-    //         ])
-    //     };
 
     //     let input = HashMap::from([("x".to_string(), Value::Float(3.0))]);
     //     let answer = HashMap::from([("y".to_string(), Value::Float(9.0))]);

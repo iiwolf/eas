@@ -265,7 +265,7 @@ impl ComponentWindow {
                         });
                 }
 
-                // Core app 
+                // Process edit space
                 egui::CentralPanel::default().show_inside(ui, |ui| {
 
                     if self.expanded {

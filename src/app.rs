@@ -5,6 +5,7 @@ use crate::grid::draw_grid;
 use crate::component_window::ComponentWindow;
 use crate::connection::{Connection, CONNECTION_STROKE};
 use crate::component::{Component, Value};
+use crate::python_process::PythonProcess;
 use crate::toolchain::Toolchain;
 use std::collections::HashMap;
 
@@ -28,7 +29,7 @@ impl Default for TemplateApp {
         // TC1 
         let tc1: Toolchain = Toolchain::new(vec![
             Component {
-                name: "Component 1".to_string(),
+                name: "EvalExpr Component".to_string(),
                 execution_process: Box::new(EvalExprProcess{eval_expression:"x = y ^ 2".to_string()}), 
                 input: HashMap::from([
                     ("y".to_string(), Value::Float(3.0))
@@ -41,8 +42,8 @@ impl Default for TemplateApp {
         // TC2
         let tc2: Toolchain = Toolchain::new(vec![
             Component{
-                name: "Component 2".to_string(),
-                execution_process: Box::new(EvalExprProcess{eval_expression:"z = x + 100.0 / (a0 + a1)".to_string()}), 
+                name: "Python Component".to_string(),
+                execution_process: Box::new(PythonProcess{eval_expression:"z = x + 100.0 / (a0 + a1)".to_string()}), 
                 input: HashMap::from([
                     ("x".to_string(), Value::Float(9.0)),
                     ("a".to_string(), Value::Vectorf32(vec![5.0, 5.0])),

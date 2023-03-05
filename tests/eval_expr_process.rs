@@ -3,34 +3,15 @@ extern crate eas;
 #[cfg(test)]
 mod tests{
     use std::{collections::HashMap};
-
-    use eas::eval_expr_process::EvalExprProcess;
+    use eas::{eval_expr_process::EvalExprProcess, component::Value, execution_process::ExecutionProcess};
 
 
     #[test]
     fn test_simulate(){
-        use eas::component::{Component, Value};
-        let mut c1 = Component{
-            name: "square".to_string(),
-            execution_process: Box::new(EvalExprProcess::new("y = x ^ 2".to_string())), 
-            input: HashMap::from([
-                ("x".to_string(), Value::Float(3.0))
-            ]),
-            output: HashMap::from([
-                ("y".to_string(), Value::Float(0.0)),
-            ])
-        };
-
-        let input = HashMap::from([("x".to_string(), Value::Float(3.0))]);
-        let answer = HashMap::from([("y".to_string(), Value::Float(9.0))]);
-        assert_eq!(c1.simulate(&input).unwrap(), answer);
-        // assert_eq!(
-        //     c2.simulate(&HashMap::from([
-        //         ("x".to_string(), Value::Float(9.0)),
-        //         ("y".to_string(), Value::Vectorf32(vec![5.0, 2.0])),
-        //     ])), 
-        //     HashMap::from([("y", 19.0)])
-        // );
-
+        
+        let mut process = EvalExprProcess::new("y = x ^ 2".to_string());
+        let input = HashMap::from([('x'.to_string(), Value::Float(2.0))]);
+        let output_hash = process.simulate(&input);
+        assert_eq!(Some(&Value::Float(4.0)), output_hash.as_ref().unwrap().get("y"));
     }
 }
